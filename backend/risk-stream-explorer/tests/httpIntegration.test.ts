@@ -60,7 +60,7 @@ describe("HTTP integration (Fastify inject)", () => {
     const env = testEnv();
     const groqService = new GroqService(env.GROQ_API_KEY, env.GROQ_MODEL, env.AI_TIMEOUT_MS, fakeClient(create));
     const aiCache = new AICacheService(env.AI_CACHE_TTL_MS);
-    return buildApp({ env, dataset, groqService, aiCache });
+    return buildApp({ env, dataset, groqService, aiCache, serveBuiltFrontend: false });
   }
 
   it("GET /api/health returns ok", async () => {

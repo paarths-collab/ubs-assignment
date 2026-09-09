@@ -29,12 +29,31 @@ export function errorHandler(error: FastifyError, request: FastifyRequest, reply
   reply.code(statusCode).send(body);
 }
 
-export function notFoundHandler(request: FastifyRequest, reply: FastifyReply): void {
-  reply.code(404).send({
-    error: {
-      code: "NOT_FOUND",
-      message: `Route ${request.method} ${request.url} not found`,
-      requestId: request.id,
-    },
-  });
+/**
+ * Builds the 404 handler. When the built frontend is being served alongside
+ * the API, a browser navigating straight to a client-side route (`/patterns`)
+ * hits Fastify, not the router — so document requests outside `/api/` fall
+ * back to the app shell and let the frontend router resolve the path. API
+ * routes and non-document requests still get the standard JSON 404.
+ */
+export function makeNotFoundHandler(spaFile: string | null) {
+  return function notFoundHandler(request: FastifyRequest, reply: FastifyReply): void {
+    const isDocumentRequest =
+      request.method === "GET" &&
+      !request.url.startsWith("/api/") &&
+      (request.headers.accept ?? "").includes("text/html");
+
+    if (spaFile !== null && isDocumentRequest) {
+      void reply.sendFile(spaFile);
+      return;
+    }
+
+    reply.code(404).send({
+      error: {
+        code: "NOT_FOUND",
+        message: `Route ${request.method} ${request.url} not found`,
+        requestId: request.id,
+      },
+    });
+  };
 }

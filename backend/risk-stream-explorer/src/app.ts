@@ -1,17 +1,20 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import fs from "node:fs";
+
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
+import fastifyStatic from "@fastify/static";
 
 import { loadEnv, type Env } from "./config/env";
 import { loadRiskDatasetFromDisk, type LoadedRiskDataset } from "./repositories/RiskDataLoader";
 import { InvestigationService } from "./services/InvestigationService";
 import { GroqService } from "./services/GroqService";
 import { AICacheService } from "./services/AICacheService";
-import { errorHandler, notFoundHandler } from "./middleware/error-handler";
+import { errorHandler, makeNotFoundHandler } from "./middleware/error-handler";
 import { registerHealthRoutes } from "./routes/health.routes";
 import { registerPatternRoutes } from "./routes/pattern.routes";
 import { registerInvestigationRoutes } from "./routes/investigation.routes";
@@ -24,11 +27,29 @@ export interface AppDependencies {
   /** Overridable so integration tests can inject a fake Groq client without touching the network. */
   groqService: GroqService;
   aiCache: AICacheService;
+  /** Tests set this false so 404s stay JSON regardless of whether dist/ exists locally. */
+  serveBuiltFrontend: boolean;
 }
 
 function defaultDataDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(here, "../data");
+}
+
+/**
+ * The built frontend, if `npm run build` has been run. Serving it from the
+ * API process makes the whole app same-origin on one port, which sidesteps
+ * CORS entirely and means a reviewer needs one command and one URL rather
+ * than a dev server, an API server and a `file://` page that browsers treat
+ * as an opaque origin.
+ */
+function resolveBuiltFrontend(): { dir: string; file: string } | null {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const dir = path.resolve(here, "../../../dist");
+  for (const file of ["risk-stream-explorer.html", "index.html"]) {
+    if (fs.existsSync(path.join(dir, file))) return { dir, file };
+  }
+  return null;
 }
 
 /**
@@ -63,7 +84,24 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
     },
   });
 
-  await app.register(helmet);
+  const builtFrontend = overrides.serveBuiltFrontend === false ? null : resolveBuiltFrontend();
+
+  // The frontend is bundled by vite-plugin-singlefile, so its JS and CSS are
+  // inlined into one HTML document. Serving that under helmet's default
+  // `script-src 'self'` would leave the page blank — the browser refuses to
+  // run inline scripts — so script-src is relaxed only when we are actually
+  // serving that bundle. The API-only configuration keeps the strict default.
+  await app.register(helmet, {
+    contentSecurityPolicy: builtFrontend
+      ? {
+          useDefaults: true,
+          directives: {
+            "script-src": ["'self'", "'unsafe-inline'"],
+            "connect-src": ["'self'"],
+          },
+        }
+      : undefined,
+  });
   await app.register(cors, { origin: env.CORS_ORIGIN });
   await app.register(rateLimit, { global: false });
 
@@ -71,8 +109,13 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   const aiCache = overrides.aiCache ?? new AICacheService(env.AI_CACHE_TTL_MS);
   const groqService = overrides.groqService ?? new GroqService(env.GROQ_API_KEY, env.GROQ_MODEL, env.AI_TIMEOUT_MS);
 
+  if (builtFrontend) {
+    await app.register(fastifyStatic, { root: builtFrontend.dir, index: false });
+    app.get("/", (_request, reply) => reply.sendFile(builtFrontend.file));
+  }
+
   app.setErrorHandler(errorHandler);
-  app.setNotFoundHandler(notFoundHandler);
+  app.setNotFoundHandler(makeNotFoundHandler(builtFrontend?.file ?? null));
 
   registerHealthRoutes(app);
   registerPatternRoutes(app, dataset.patternRepository);
