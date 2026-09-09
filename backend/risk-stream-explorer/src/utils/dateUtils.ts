@@ -18,7 +18,7 @@ export function isValidIsoDate(value: unknown): value is string {
 }
 
 export function parseIsoDate(iso: string): Date {
-  const [y, m, d] = iso.split("-").map(Number);
+  const [y, m, d] = iso.split("-").map(Number) as [number, number, number];
   return new Date(Date.UTC(y, m - 1, d));
 }
 
@@ -70,7 +70,7 @@ export function getMonthBounds(date: Date): MonthBounds {
 }
 
 export function formatMonthLabel(monthId: string): string {
-  const [y, m] = monthId.split("-").map(Number);
+  const [y, m] = monthId.split("-").map(Number) as [number, number];
   const date = new Date(Date.UTC(y, m - 1, 1));
   return date.toLocaleDateString("en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
 }
