@@ -21,6 +21,9 @@ import { registerAiRoutes } from "./routes/ai.routes";
 export interface AppDependencies {
   env: Env;
   dataset: LoadedRiskDataset;
+  /** Overridable so integration tests can inject a fake Groq client without touching the network. */
+  groqService: GroqService;
+  aiCache: AICacheService;
 }
 
 function defaultDataDir(): string {
@@ -65,8 +68,8 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   await app.register(rateLimit, { global: false });
 
   const investigationService = new InvestigationService(dataset.patternRepository, dataset.eventRepository);
-  const aiCache = new AICacheService(env.AI_CACHE_TTL_MS);
-  const groqService = new GroqService(env.GROQ_API_KEY, env.GROQ_MODEL, env.AI_TIMEOUT_MS);
+  const aiCache = overrides.aiCache ?? new AICacheService(env.AI_CACHE_TTL_MS);
+  const groqService = overrides.groqService ?? new GroqService(env.GROQ_API_KEY, env.GROQ_MODEL, env.AI_TIMEOUT_MS);
 
   app.setErrorHandler(errorHandler);
   app.setNotFoundHandler(notFoundHandler);
