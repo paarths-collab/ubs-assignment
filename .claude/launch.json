@@ -1,0 +1,32 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "risk-stream-explorer-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=frontend/risk-stream-explorer", "--", "--port", "5183", "--strictPort"],
+      "port": 5183
+    },
+    {
+      "name": "risk-stream-explorer-dev-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=frontend/risk-stream-explorer", "--", "--port", "5187", "--strictPort"],
+      "port": 5187
+    },
+    {
+      "name": "risk-relationship-network-dev",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": [
+        "-lc",
+        "cd /Users/paarthgala/Coding/UBS-risk-relationship-network && npm run dev:rrn"
+      ],
+      "port": 5185
+    },
+    {
+      "name": "risk-stream-explorer-dist-static",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-m", "http.server", "5199", "--directory", "dist"],
+      "port": 5199
+    }
+  ]
+}
