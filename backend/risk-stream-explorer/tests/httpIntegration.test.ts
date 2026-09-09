@@ -15,7 +15,7 @@ function testEnv(overrides: Partial<Env> = {}): Env {
     GROQ_API_KEY: "test-key",
     GROQ_MODEL: "test-model",
     PORT: 0,
-    CORS_ORIGIN: "http://localhost:5173",
+    CORS_ORIGIN: ["http://localhost:5173"],
     AI_TIMEOUT_MS: 5000,
     AI_CACHE_TTL_MS: 60_000,
     NODE_ENV: "test",

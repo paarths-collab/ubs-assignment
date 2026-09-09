@@ -2,7 +2,7 @@ export interface Env {
   GROQ_API_KEY: string;
   GROQ_MODEL: string;
   PORT: number;
-  CORS_ORIGIN: string;
+  CORS_ORIGIN: string[];
   AI_TIMEOUT_MS: number;
   AI_CACHE_TTL_MS: number;
   NODE_ENV: string;
@@ -10,9 +10,21 @@ export interface Env {
 
 const DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
 const DEFAULT_PORT = 3001;
-const DEFAULT_CORS_ORIGIN = "http://localhost:5173";
+// Vite's singlefile plugin bundles the frontend into one portable HTML file
+// meant to be opened directly (double-clicked, `file://`) as well as served
+// by a dev/static server, so the allowlist covers both: the Vite dev server
+// ports this project uses, the plain static-file preview port, and "null" —
+// the literal Origin value browsers send for a `file://` page's fetch calls.
+const DEFAULT_CORS_ORIGIN = "http://localhost:5173,http://localhost:5183,http://localhost:5187,http://localhost:5199,null";
 const DEFAULT_AI_TIMEOUT_MS = 15_000;
 const DEFAULT_AI_CACHE_TTL_MS = 3_600_000;
+
+function parseOriginList(raw: string): string[] {
+  return raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+}
 
 function parsePositiveInt(raw: string | undefined, fallback: number, name: string): number {
   if (raw === undefined || raw === "") return fallback;
@@ -34,7 +46,9 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
     GROQ_API_KEY: source.GROQ_API_KEY ?? "",
     GROQ_MODEL: source.GROQ_MODEL && source.GROQ_MODEL.length > 0 ? source.GROQ_MODEL : DEFAULT_GROQ_MODEL,
     PORT: parsePositiveInt(source.PORT, DEFAULT_PORT, "PORT"),
-    CORS_ORIGIN: source.CORS_ORIGIN && source.CORS_ORIGIN.length > 0 ? source.CORS_ORIGIN : DEFAULT_CORS_ORIGIN,
+    CORS_ORIGIN: parseOriginList(
+      source.CORS_ORIGIN && source.CORS_ORIGIN.length > 0 ? source.CORS_ORIGIN : DEFAULT_CORS_ORIGIN,
+    ),
     AI_TIMEOUT_MS: parsePositiveInt(source.AI_TIMEOUT_MS, DEFAULT_AI_TIMEOUT_MS, "AI_TIMEOUT_MS"),
     AI_CACHE_TTL_MS: parsePositiveInt(source.AI_CACHE_TTL_MS, DEFAULT_AI_CACHE_TTL_MS, "AI_CACHE_TTL_MS"),
     NODE_ENV: source.NODE_ENV ?? "development",

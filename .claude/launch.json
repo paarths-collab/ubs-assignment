@@ -33,7 +33,7 @@
       "runtimeExecutable": "bash",
       "runtimeArgs": [
         "-lc",
-        "cd backend/risk-stream-explorer && CORS_ORIGIN=http://localhost:5183 PORT=3001 npx tsx watch src/server.ts"
+        "cd backend/risk-stream-explorer && PORT=3001 npx tsx watch src/server.ts"
       ],
       "port": 3001
     }
