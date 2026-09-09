@@ -109,19 +109,18 @@ export function renderIssuesPage(root: HTMLElement): void {
     renderList();
 
     detailHost.innerHTML = "";
-    const grid = el("div", { className: "section-grid section-grid--investigation" });
+    // Full width: the deterministic analysis is the product and its tables
+    // need the room. The AI panel is collapsed out of the way behind a small
+    // control in the panel's corner and only takes space once asked for.
     const detailPanel = el("div", { className: "panel" }, [el("div", { className: "loading-state" }, ["Loading issue analysis…"])]);
-    const aiPanel = el("div", { className: "panel" });
-    grid.append(detailPanel, aiPanel);
-    detailHost.append(grid);
+    const aiPanel = el("div", { className: "panel panel--ai-collapsed", hidden: true });
+    detailHost.append(detailPanel, aiPanel);
 
-    // The AI panel loads independently — it never waits on (or blocks) the
-    // deterministic analysis fetch next to it.
-    renderIssueAIPanel(aiPanel, slug, openEvent);
+    const ai = renderIssueAIPanel(aiPanel, slug, openEvent);
 
     fetchIssueDetail(slug)
       .then((detail) => {
-        renderIssueDetailPanel(detailPanel, detail, openEvent);
+        renderIssueDetailPanel(detailPanel, detail, openEvent, ai.run);
       })
       .catch((err: unknown) => {
         const message = err instanceof ApiError ? err.message : "This issue could not be loaded.";

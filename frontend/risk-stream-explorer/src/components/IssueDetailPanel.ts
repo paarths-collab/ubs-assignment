@@ -113,14 +113,22 @@ function workflowConcentrationList(title: string, entries: WorkflowConcentration
  * Event IDs. Every number here comes straight from the API response —
  * nothing depends on the AI panel loading successfully.
  */
-export function renderIssueDetailPanel(container: HTMLElement, detail: IssueDetailResponse, onOpenEvent: (eventId: string) => void): void {
+export function renderIssueDetailPanel(
+  container: HTMLElement,
+  detail: IssueDetailResponse,
+  onOpenEvent: (eventId: string) => void,
+  onRunAi?: () => void,
+): void {
   const { profile } = detail;
 
   container.innerHTML = "";
   container.append(
     el("div", { className: "panel__header" }, [
       el("span", { className: "panel__title" }, [profile.issue]),
-      el("span", { className: "pattern-card__id" }, [`${profile.rankScore} signal${profile.rankScore === 1 ? "" : "s"}`]),
+      el("div", { className: "panel__header-actions" }, [
+        el("span", { className: "pattern-card__id" }, [`${profile.rankScore} signal${profile.rankScore === 1 ? "" : "s"}`]),
+        ...(onRunAi ? [el("button", { type: "button", className: "btn-ai-corner", title: "Ask Groq to interpret this evidence", onclick: onRunAi }, ["◈ AI"])] : []),
+      ]),
     ]),
   );
 

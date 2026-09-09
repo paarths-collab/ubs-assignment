@@ -18,21 +18,13 @@
 }
 
 /*
- * The deterministic analysis carries dense tables (root cause, organisation,
- * enterprise comparison) and needs the room; the AI column holds prose and
- * reads fine narrower, so the split is deliberately lopsided rather than even.
+ * The issue analysis runs full width — its tables (root cause, organisation,
+ * enterprise comparison) are dense and were being squeezed by a side column
+ * that mostly sat empty. AI interpretation is opt-in from the corner control
+ * and appears below, so it costs no width until it is asked for.
  */
-@media (min-width: 1100px) {
-  .section-grid--investigation {
-    grid-template-columns: minmax(0, 1.9fr) minmax(320px, 0.9fr);
-    align-items: start;
-  }
-}
-
-@media (min-width: 1600px) {
-  .section-grid--investigation {
-    grid-template-columns: minmax(0, 2.2fr) minmax(360px, 0.8fr);
-  }
+.panel--ai-collapsed {
+  margin-top: var(--space-3);
 }
 
 /* ---------- Priority queue cards ---------- */
@@ -274,39 +266,35 @@
   margin-top: var(--space-1);
 }
 
-.ai-idle {
+.panel__header-actions {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: flex-start;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
 }
 
-.ai-idle__text {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.55;
-  color: var(--text-secondary);
-}
-
-.btn-run-ai {
+.btn-ai-corner {
   font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--bg-base);
-  background: var(--accent-amber);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--accent-amber);
+  background: transparent;
   border: 1px solid var(--accent-amber);
-  border-radius: var(--radius-md);
-  padding: 9px var(--space-4);
+  border-radius: var(--radius-sm);
+  padding: 3px 8px;
   cursor: pointer;
-  transition: filter var(--transition-fast);
+  white-space: nowrap;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
 }
 
-.btn-run-ai:hover {
-  filter: brightness(1.12);
+.btn-ai-corner:hover {
+  background: var(--accent-amber);
+  color: var(--bg-base);
 }
 
-.btn-run-ai:focus-visible {
+.btn-ai-corner:focus-visible {
   outline: 2px solid var(--accent-amber);
   outline-offset: 2px;
 }

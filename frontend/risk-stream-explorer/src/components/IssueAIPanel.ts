@@ -55,39 +55,49 @@ function renderError(container: HTMLElement, message: string, onRetry: () => voi
   );
 }
 
-function renderIdle(container: HTMLElement, onRun: () => void): void {
-  container.innerHTML = "";
-  container.append(
-    el("div", { className: "ai-idle" }, [
-      el("p", { className: "ai-idle__text" }, [
-        "The analysis on the left is already complete and fully deterministic. Groq adds interpretation only — why this may matter, what to investigate, and where the evidence is weak.",
-      ]),
-      el("button", { type: "button", className: "btn-run-ai", onclick: onRun }, ["Run AI analysis"]),
-    ]),
-  );
-}
-
 /**
- * The "AI Analyst Assistant" panel for one issue. Nothing is requested until
- * the analyst asks for it: the deterministic panel beside this one is the
- * product, and an LLM call costs tokens and latency for an answer that is
- * interpretation rather than evidence — so it stays behind an explicit
- * button. Calls POST /api/ai/issue/:issueSlug, which never calls Groq from
- * the browser and never trusts Groq for numbers/IDs — only the five prose
- * fields below are Groq-sourced, clearly labelled as such. The model is
- * explicitly instructed to challenge the evidence, not just support it —
- * "Why it may matter" and "Limitations" are where that shows up.
+ * The "AI Analyst Assistant" panel for one issue. It renders nothing and
+ * requests nothing until `run()` is called from the small control in the
+ * analysis panel's corner: the deterministic analysis is the product and is
+ * complete without this, so interpretation stays opt-in and out of the way
+ * rather than occupying a column and spending a Groq request per issue click.
+ *
+ * Calls POST /api/ai/issue/:issueSlug, which never calls Groq from the
+ * browser and never trusts Groq for numbers/IDs — only the five prose fields
+ * below are Groq-sourced, clearly labelled as such. The model is explicitly
+ * instructed to challenge the evidence, not just support it — "Why it may
+ * matter" and "Limitations" are where that shows up.
  */
-export function renderIssueAIPanel(container: HTMLElement, issueSlug: string, onOpenEvent: (eventId: string) => void): void {
+export function renderIssueAIPanel(
+  container: HTMLElement,
+  issueSlug: string,
+  onOpenEvent: (eventId: string) => void,
+): { run: () => void } {
   container.innerHTML = "";
   container.append(
     el("div", { className: "panel__header" }, [
       el("span", { className: "panel__title" }, ["AI Analyst Assistant"]),
-      el("span", { className: "ai-panel__live-badge", style: "position:static" }, ["GROQ"]),
+      el("div", { className: "panel__header-actions" }, [
+        el("span", { className: "ai-panel__live-badge", style: "position:static" }, ["GROQ"]),
+        el(
+          "button",
+          {
+            type: "button",
+            className: "btn-ai-corner",
+            "aria-label": "Hide AI analysis",
+            onclick: () => {
+              container.hidden = true;
+            },
+          },
+          ["×"],
+        ),
+      ]),
     ]),
   );
   const body = el("div", { className: "panel__body ai-panel" });
   container.append(body);
+
+  let started = false;
 
   function load(): void {
     body.innerHTML = "";
@@ -107,5 +117,15 @@ export function renderIssueAIPanel(container: HTMLElement, issueSlug: string, on
       });
   }
 
-  renderIdle(body, load);
+  return {
+    run(): void {
+      container.hidden = false;
+      // Re-showing an answer already fetched shouldn't spend another request;
+      // only the first run (or an explicit retry) calls Groq.
+      if (started) return;
+      started = true;
+      load();
+      container.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    },
+  };
 }
