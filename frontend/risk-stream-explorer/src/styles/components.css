@@ -263,51 +263,53 @@ button {
   pointer-events: none;
 }
 
-.streamgraph-tooltip {
-  position: absolute;
-  pointer-events: none;
-  background: var(--bg-panel-raised);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
+/*
+ * The period preview lives in normal document flow below the chart — never
+ * an absolutely positioned overlay — specifically so it can't cover the
+ * streamgraph while hovering. It has a fixed min-height so the layout
+ * doesn't jump between the placeholder and populated states.
+ */
+.streamgraph-scorecard {
+  margin: 0 var(--space-4) var(--space-3);
   padding: var(--space-3);
-  font-size: 12px;
-  min-width: 200px;
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
-  z-index: 50;
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-}
-
-.streamgraph-tooltip.is-visible {
-  opacity: 1;
-}
-
-.streamgraph-tooltip__date {
-  font-family: var(--font-mono);
-  color: var(--accent-amber);
-  font-size: 11px;
-  margin-bottom: 4px;
-}
-
-.streamgraph-tooltip__total {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.streamgraph-tooltip__row {
+  min-height: 62px;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
   display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-  color: var(--text-secondary);
-  font-size: 11px;
-  padding: 1px 0;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--space-2);
 }
 
-.streamgraph-tooltip__hint {
-  margin-top: 6px;
-  color: var(--text-muted);
+.streamgraph-scorecard.is-placeholder {
+  border-style: dashed;
+}
+
+.streamgraph-scorecard__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.streamgraph-scorecard__stat-label {
   font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.streamgraph-scorecard__stat-value {
+  font-family: var(--font-mono);
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.streamgraph-scorecard__hint {
+  color: var(--text-muted);
+  font-size: 11px;
 }
 
 .streamgraph-accessible-table {

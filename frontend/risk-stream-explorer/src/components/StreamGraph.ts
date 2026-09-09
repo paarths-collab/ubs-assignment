@@ -42,18 +42,21 @@ function colorFor(groupBy: string, key: string, allKeys: string[]): string {
 export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void {
   const legendEl = el("div", { className: "streamgraph-legend" });
   const svgWrap = el("div", { className: "streamgraph-container" });
-  const tooltip = el("div", { className: "streamgraph-tooltip", role: "status", "aria-live": "polite" });
+  // A normal in-flow HTML block below the chart — not an absolutely
+  // positioned overlay — so hovering a period can never cover the graph
+  // itself. It always reserves its own space; content swaps on hover/focus.
+  const scorecard = el("div", { className: "streamgraph-scorecard", role: "status", "aria-live": "polite" });
+  showScorecardPlaceholder(scorecard);
   const accessibleTableWrap = el("div", { className: "streamgraph-accessible-table" });
 
-  svgWrap.append(tooltip);
-  container.append(legendEl, svgWrap, accessibleTableWrap);
+  container.append(legendEl, svgWrap, scorecard, accessibleTableWrap);
 
   function draw(): void {
     // The hit-rects driving hover are destroyed and rebuilt below, which
-    // never fires a mouseleave — clear any stale tooltip explicitly so it
-    // can't keep showing a previous period's data after the underlying
-    // element is gone.
-    tooltip.classList.remove("is-visible");
+    // never fires a mouseleave — reset the scorecard to its placeholder
+    // explicitly so it can't keep showing a previous period's data after
+    // the underlying element is gone.
+    showScorecardPlaceholder(scorecard);
 
     const state = ctx.getState();
     const filteredEvents = ctx.getFilteredEvents();
@@ -71,7 +74,7 @@ export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void
     }
     svgWrap.querySelector(".empty-state")?.remove();
 
-    drawSvg(svgWrap, tooltip, data, periods, filteredEvents, state, ctx);
+    drawSvg(svgWrap, scorecard, data, periods, filteredEvents, state, ctx);
   }
 
   ctx.subscribe(draw);
@@ -145,7 +148,7 @@ function renderAccessibleTable(wrap: HTMLElement, data: { seriesKeys: string[]; 
 
 function drawSvg(
   svgWrap: HTMLElement,
-  tooltip: HTMLElement,
+  scorecard: HTMLElement,
   data: { seriesKeys: string[]; points: StreamPoint[] },
   periods: Period[],
   filteredEvents: StreamEvent[],
@@ -287,39 +290,56 @@ function drawSvg(
           ctx.selectPeriod(point.periodId);
         }
       })
-      .on("mouseenter", () => showTooltip(tooltip, point, periods, filteredEvents, cx, svgWrap))
-      .on("mouseleave", () => tooltip.classList.remove("is-visible"))
-      .on("focus", () => showTooltip(tooltip, point, periods, filteredEvents, cx, svgWrap));
+      .on("mouseenter", () => showScorecard(scorecard, point, periods, filteredEvents))
+      .on("mouseleave", () => showScorecardPlaceholder(scorecard))
+      .on("focus", () => showScorecard(scorecard, point, periods, filteredEvents));
   });
 
-  svgWrap.insertBefore(svg.node()!, tooltip);
+  svgWrap.append(svg.node()!);
 }
 
-function showTooltip(
-  tooltip: HTMLElement,
+function scorecardStat(label: string, value: string): HTMLElement {
+  return el("div", { className: "streamgraph-scorecard__stat" }, [
+    el("div", { className: "streamgraph-scorecard__stat-label" }, [label]),
+    el("div", { className: "streamgraph-scorecard__stat-value" }, [value]),
+  ]);
+}
+
+function showScorecardPlaceholder(scorecard: HTMLElement): void {
+  scorecard.innerHTML = "";
+  scorecard.classList.add("is-placeholder");
+  scorecard.append(
+    el("div", { className: "streamgraph-scorecard__hint" }, [
+      "Hover a point on the timeline for a quick preview, or click it to investigate the full period below.",
+    ]),
+  );
+}
+
+/**
+ * Renders period preview stats into a normal in-flow block below the chart
+ * (never an overlay on top of it) so hovering the timeline can never hide
+ * the lines/areas underneath — the exact problem with the old floating
+ * tooltip implementation.
+ */
+function showScorecard(
+  scorecard: HTMLElement,
   point: StreamPoint,
   periods: Period[],
   filteredEvents: StreamEvent[],
-  cx: number,
-  svgWrap: HTMLElement,
 ): void {
   const period = periods.find((p) => p.id === point.periodId);
-  tooltip.innerHTML = "";
-  tooltip.append(
-    el("div", { className: "streamgraph-tooltip__date" }, [point.label]),
-    el("div", { className: "streamgraph-tooltip__total" }, [`${point.total} events`]),
-  );
-  const sortedSeries = Object.entries(point.series)
+  scorecard.innerHTML = "";
+  scorecard.classList.remove("is-placeholder");
+
+  const topSeries = Object.entries(point.series)
     .filter(([, v]) => v > 0)
-    .sort(([, a], [, b]) => b - a);
-  for (const [key, value] of sortedSeries) {
-    tooltip.append(
-      el("div", { className: "streamgraph-tooltip__row" }, [
-        el("span", {}, [key]),
-        el("span", {}, [String(value)]),
-      ]),
-    );
-  }
+    .sort(([, a], [, b]) => b - a)[0];
+
+  const stats: HTMLElement[] = [
+    scorecardStat(point.label, `${point.total} events`),
+    ...(topSeries ? [scorecardStat("Largest series", `${topSeries[0]} (${topSeries[1]})`)] : []),
+  ];
+
   if (period) {
     const periodEvents = getEventsInPeriod(filteredEvents, period);
     const metrics = computePeriodMetrics(periodEvents, {
@@ -328,26 +348,21 @@ function showTooltip(
       startDate: period.startDate,
       endDate: period.endDate,
     });
-    tooltip.append(
-      el("div", { className: "streamgraph-tooltip__row" }, [
-        el("span", {}, ["High severity"]),
-        el("span", {}, [formatPercent(metrics.severityShares.High)]),
-      ]),
-      el("div", { className: "streamgraph-tooltip__row" }, [
-        el("span", {}, ["Net exposure"]),
-        el("span", {}, [formatMoney(metrics.financial.netAmount.populatedCount > 0 ? metrics.financial.netAmount.total : null)]),
-      ]),
-      el("div", { className: "streamgraph-tooltip__row" }, [
-        el("span", {}, ["Potential impact"]),
-        el("span", {}, [formatMoney(metrics.financial.potentialImpact.populatedCount > 0 ? metrics.financial.potentialImpact.total : null)]),
-      ]),
+    stats.push(
+      scorecardStat("High severity", formatPercent(metrics.severityShares.High)),
+      scorecardStat(
+        "Net exposure",
+        formatMoney(metrics.financial.netAmount.populatedCount > 0 ? metrics.financial.netAmount.total : null),
+      ),
+      scorecardStat(
+        "Potential impact",
+        formatMoney(metrics.financial.potentialImpact.populatedCount > 0 ? metrics.financial.potentialImpact.total : null),
+      ),
     );
   }
-  tooltip.append(el("div", { className: "streamgraph-tooltip__hint" }, ["Click to investigate this period"]));
-  tooltip.classList.add("is-visible");
 
-  const wrapRect = svgWrap.getBoundingClientRect();
-  const left = Math.min(Math.max(cx - 90, 8), wrapRect.width - 220);
-  tooltip.style.left = `${left}px`;
-  tooltip.style.top = `8px`;
+  scorecard.append(
+    el("div", { className: "streamgraph-scorecard__stats" }, stats),
+    el("div", { className: "streamgraph-scorecard__hint" }, ["Click this point on the timeline to investigate the full period below."]),
+  );
 }
