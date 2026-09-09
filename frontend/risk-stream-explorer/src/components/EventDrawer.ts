@@ -10,6 +10,7 @@ import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { renderAIPanel } from "./AIInsightPanel";
 import { buildEventMessages } from "../services/promptBuilder";
+import { eventTypeBadge, severityBadge } from "./badges";
 
 const EVENT_AI_ACTIONS: { intent: EventInsightIntent; label: string }[] = [
   { intent: "summarise_event", label: "Summarise event" },
@@ -70,18 +71,30 @@ export function renderEventDrawer(ctx: AppContext, container: HTMLElement): void
     drawer.append(
       el("div", { className: "drawer__header" }, [
         el("div", {}, [
+          el("div", { className: "drawer__header-badges" }, [
+            severityBadge(event.severity),
+            eventTypeBadge(event.eventType),
+          ]),
           el("div", { className: "drawer__title" }, [event.eventTitle]),
-          el("div", { className: "drawer__subtitle" }, [`${event.eventId} · ${shortOrganisationName(event.ownerOrganisation)}`]),
+          el("div", { className: "drawer__subtitle" }, [
+            `${event.eventId} · ${shortOrganisationName(event.ownerOrganisation)} · Occurred ${event.occurrenceDate}`,
+          ]),
         ]),
         el(
           "button",
-          { type: "button", className: "drawer__close", "aria-label": "Close event drawer", onclick: () => ctx.closeDrawer() },
+          { type: "button", className: "drawer__close", "aria-label": "Close event details", onclick: () => ctx.closeDrawer() },
           ["×"],
         ),
       ]),
     );
 
     const body = el("div", { className: "drawer__body" });
+    const detailCol = el("div", { className: "drawer__col drawer__col--detail" }, [
+      el("div", { className: "drawer__col-title" }, ["Event Record"]),
+    ]);
+    const aiCol = el("div", { className: "drawer__col drawer__col--ai" }, [
+      el("div", { className: "drawer__col-title" }, ["AI Analysis"]),
+    ]);
 
     const sections = renderEventDetailSections(detail);
     sections.forEach((section, i) => {
@@ -113,10 +126,10 @@ export function renderEventDrawer(ctx: AppContext, container: HTMLElement): void
       );
 
       sectionEl.append(header, bodyEl);
-      body.append(sectionEl);
+      detailCol.append(sectionEl);
     });
 
-    const aiHost = el("div", { className: "ai-panel", style: "margin-top:16px" });
+    const aiHost = el("div", { className: "ai-panel" });
     const scopedEvents = applyFilters(ctx.repository.getAll(), state.filters);
     const themeShareInDataset =
       scopedEvents.length > 0
@@ -134,8 +147,9 @@ export function renderEventDrawer(ctx: AppContext, container: HTMLElement): void
         buildEventMessages(intent, event, detail, similarEvents, themeShareInDataset, rootCauseShareInDataset),
       "AI Risk Analyst — Event",
     );
-    body.append(aiHost);
+    aiCol.append(aiHost);
 
+    body.append(detailCol, aiCol);
     drawer.append(body);
   }
 
