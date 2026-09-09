@@ -1,6 +1,8 @@
 import Groq from "groq-sdk";
 import { buildSystemPrompt } from "../prompts/pattern-analysis.prompt";
+import { buildIssueSystemPrompt } from "../prompts/issue-analysis.prompt";
 import type { GroqFactPayload } from "../types/Pattern";
+import type { IssueEvidencePayload } from "../types/Issue";
 
 /** Minimal surface this service needs from a Groq client — lets tests inject a fake without touching the network. */
 export interface GroqClientLike {
@@ -31,6 +33,28 @@ const RESPONSE_JSON_SCHEMA = {
       limitations: { type: "string" },
     },
     required: ["interpretation", "investigationQuestions", "suggestedControl", "limitations"],
+  },
+} as const;
+
+const ISSUE_RESPONSE_JSON_SCHEMA = {
+  name: "issue_analysis",
+  strict: true,
+  schema: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      interpretation: { type: "string" },
+      whyItMayMatter: { type: "string" },
+      investigationQuestions: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 3,
+        maxItems: 5,
+      },
+      suggestedControl: { type: "string" },
+      limitations: { type: "string" },
+    },
+    required: ["interpretation", "whyItMayMatter", "investigationQuestions", "suggestedControl", "limitations"],
   },
 } as const;
 
@@ -84,26 +108,39 @@ export class GroqService {
   }
 
   async analyzePattern(factPayload: GroqFactPayload): Promise<unknown> {
+    const call = () => this.callOnce(buildSystemPrompt(), factPayload, RESPONSE_JSON_SCHEMA);
     try {
-      return await this.callOnce(factPayload);
+      return await call();
     } catch (err) {
       if (isRetryableGroqError(err)) {
-        return await this.callOnce(factPayload);
+        return await call();
       }
       throw err;
     }
   }
 
-  private async callOnce(factPayload: GroqFactPayload): Promise<unknown> {
+  async analyzeIssue(evidencePayload: IssueEvidencePayload): Promise<unknown> {
+    const call = () => this.callOnce(buildIssueSystemPrompt(), evidencePayload, ISSUE_RESPONSE_JSON_SCHEMA);
+    try {
+      return await call();
+    } catch (err) {
+      if (isRetryableGroqError(err)) {
+        return await call();
+      }
+      throw err;
+    }
+  }
+
+  private async callOnce(systemPrompt: string, payload: unknown, jsonSchema: Record<string, unknown>): Promise<unknown> {
     const completion = await this.client.chat.completions.create(
       {
         model: this.model,
         temperature: 0.2,
         messages: [
-          { role: "system", content: buildSystemPrompt() },
-          { role: "user", content: JSON.stringify(factPayload) },
+          { role: "system", content: systemPrompt },
+          { role: "user", content: JSON.stringify(payload) },
         ],
-        response_format: { type: "json_schema", json_schema: RESPONSE_JSON_SCHEMA },
+        response_format: { type: "json_schema", json_schema: jsonSchema },
       },
       { timeout: this.timeoutMs },
     );

@@ -12,14 +12,16 @@ import fastifyStatic from "@fastify/static";
 import { loadEnv, type Env } from "./config/env";
 import { loadRiskDatasetFromDisk, type LoadedRiskDataset } from "./repositories/RiskDataLoader";
 import { InvestigationService } from "./services/InvestigationService";
+import { IssueIntelligenceService } from "./services/IssueIntelligenceService";
 import { GroqService } from "./services/GroqService";
 import { AICacheService } from "./services/AICacheService";
 import { errorHandler, makeNotFoundHandler } from "./middleware/error-handler";
 import { registerHealthRoutes } from "./routes/health.routes";
 import { registerPatternRoutes } from "./routes/pattern.routes";
 import { registerInvestigationRoutes } from "./routes/investigation.routes";
+import { registerIssueRoutes } from "./routes/issue.routes";
 import { registerEventRoutes } from "./routes/event.routes";
-import { registerAiRoutes } from "./routes/ai.routes";
+import { registerAiRoutes, registerIssueAiRoutes } from "./routes/ai.routes";
 
 export interface AppDependencies {
   env: Env;
@@ -106,6 +108,9 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   await app.register(rateLimit, { global: false });
 
   const investigationService = new InvestigationService(dataset.patternRepository, dataset.eventRepository);
+  // Computed once at startup and served from memory thereafter — see
+  // IssueIntelligenceService's class doc for why this never recomputes per request.
+  const issueIntelligenceService = new IssueIntelligenceService(dataset.eventRepository, dataset.patternRepository);
   const aiCache = overrides.aiCache ?? new AICacheService(env.AI_CACHE_TTL_MS);
   const groqService = overrides.groqService ?? new GroqService(env.GROQ_API_KEY, env.GROQ_MODEL, env.AI_TIMEOUT_MS);
 
@@ -120,8 +125,10 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   registerHealthRoutes(app);
   registerPatternRoutes(app, dataset.patternRepository);
   registerInvestigationRoutes(app, investigationService);
+  registerIssueRoutes(app, issueIntelligenceService, dataset.patternRepository);
   registerEventRoutes(app, dataset.eventRepository);
   registerAiRoutes(app, { patternRepository: dataset.patternRepository, groqService, aiCache, env });
+  registerIssueAiRoutes(app, { issueIntelligenceService, groqService, aiCache, env });
 
   return app;
 }
