@@ -114,10 +114,8 @@ export function renderFilterBar(ctx: AppContext): HTMLElement {
     el("div", { className: "filter-field" }, [el("label", {}, ["From"]), dateStart]),
     el("div", { className: "filter-field" }, [el("label", {}, ["To"]), dateEnd]),
     el("div", { className: "filter-field" }, [el("label", {}, ["Granularity"]), granularitySegment]),
-    el("div", { className: "filter-field" }, [el("label", {}, ["Group stream by"]), groupBySegment]),
-    el("div", { className: "filter-bar__spacer" }),
-    activeCount,
-    resetBtn,
+    el("div", { className: "filter-field filter-field--wide" }, [el("label", {}, ["Group stream by"]), groupBySegment]),
+    el("div", { className: "filter-bar__actions" }, [activeCount, resetBtn]),
   ]);
 
   function sync(): void {

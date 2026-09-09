@@ -13,20 +13,23 @@ import { el } from "./dom";
 import { formatMoney, formatPercent } from "@backend/index";
 
 const SEVERITY_COLORS: Record<string, string> = {
-  Low: "#3a7d8c",
-  Moderate: "#e8b34a",
-  High: "#ef4d8e",
+  Low: "#22c55e",
+  Moderate: "#f5a623",
+  High: "#ef4444",
 };
 
 const EVENT_TYPE_COLORS: Record<string, string> = {
-  "Non-Financial": "#5c7ba8",
-  Financial: "#35e6e0",
+  "Non-Financial": "#7c8794",
+  Financial: "#3772ff",
 };
 
+// Categorical palette for risk-theme/organisation grouping — deliberately
+// avoids red/green so those stay reserved for severity and positive/negative
+// meaning elsewhere in the UI.
 const CATEGORICAL_PALETTE = [
-  "#35e6e0", "#e8b34a", "#ef4d8e", "#5c7ba8", "#7dd3a0",
-  "#c792ea", "#f0a868", "#6fb8e0", "#e07a9e", "#8fd4c1",
-  "#d4a5e8", "#b0c94e",
+  "#3772ff", "#f5a623", "#7c5cff", "#22b8cf", "#ff8fab",
+  "#8b95a5", "#5e9cff", "#c99b3f", "#a5a8ff", "#4fc3d9",
+  "#ff9f6b", "#6dd3b0",
 ];
 
 function colorFor(groupBy: string, key: string, allKeys: string[]): string {
@@ -217,7 +220,7 @@ function drawSvg(
     .curve(d3.curveMonotoneX);
   g.append("path")
     .attr("fill", "none")
-    .attr("stroke", "var(--accent-cyan)")
+    .attr("stroke", "var(--accent-primary)")
     .attr("stroke-width", 1.5)
     .attr("opacity", 0.9)
     .attr("d", totalLine(data.points));

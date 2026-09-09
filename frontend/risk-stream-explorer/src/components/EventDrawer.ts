@@ -1,4 +1,6 @@
 import {
+  applyFilters,
+  findSimilarEvents,
   renderEventDetailSections,
   shortOrganisationName,
   type EventInsightIntent,
@@ -7,6 +9,7 @@ import {
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { renderAIPanel } from "./AIInsightPanel";
+import { buildEventMessages } from "../services/promptBuilder";
 
 const EVENT_AI_ACTIONS: { intent: EventInsightIntent; label: string }[] = [
   { intent: "summarise_event", label: "Summarise event" },
@@ -114,10 +117,21 @@ export function renderEventDrawer(ctx: AppContext, container: HTMLElement): void
     });
 
     const aiHost = el("div", { className: "ai-panel", style: "margin-top:16px" });
+    const scopedEvents = applyFilters(ctx.repository.getAll(), state.filters);
+    const themeShareInDataset =
+      scopedEvents.length > 0
+        ? scopedEvents.filter((e) => e.riskTheme === event.riskTheme).length / scopedEvents.length
+        : null;
+    const rootCauseShareInDataset =
+      scopedEvents.length > 0
+        ? scopedEvents.filter((e) => e.rootCause === event.rootCause).length / scopedEvents.length
+        : null;
+    const similarEvents = findSimilarEvents(event, ctx.repository.getAll());
     renderAIPanel(
       aiHost,
       EVENT_AI_ACTIONS,
-      (intent) => ctx.aiRepository.getEventInsight(intent, event.eventId, state.filters),
+      (intent) =>
+        buildEventMessages(intent, event, detail, similarEvents, themeShareInDataset, rootCauseShareInDataset),
       "AI Risk Analyst — Event",
     );
     body.append(aiHost);

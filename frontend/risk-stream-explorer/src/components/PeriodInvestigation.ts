@@ -1,14 +1,17 @@
 import {
+  detectTrendFacts,
   getPeriodDetail,
+  rankTrendFacts,
   type PeriodInsightIntent,
 } from "@backend/index";
-import { formatDays, formatMoney, formatPercent } from "@backend/index";
+import { formatDays, formatMoney, formatPercent, shortOrganisationName } from "@backend/index";
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { metricCard, deltaBadge } from "./metricCard";
 import { breakdownList } from "./breakdownList";
 import { renderAIPanel } from "./AIInsightPanel";
 import { renderEventCard } from "./EventCard";
+import { buildPeriodMessages } from "../services/promptBuilder";
 
 const PERIOD_AI_ACTIONS: { intent: PeriodInsightIntent; label: string }[] = [
   { intent: "explain_period", label: "Explain this period" },
@@ -97,10 +100,16 @@ export function renderPeriodInvestigation(ctx: AppContext, container: HTMLElemen
 
         (() => {
           const aiHost = el("div", { className: "ai-panel", style: "margin-top:20px" });
+          const scopeDescription = state.filters.organisation
+            ? shortOrganisationName(state.filters.organisation)
+            : "Enterprise-wide";
+          const rankedTrendFacts = rankTrendFacts(
+            detectTrendFacts(detail.comparison.current, detail.comparison.previous),
+          );
           renderAIPanel(
             aiHost,
             PERIOD_AI_ACTIONS,
-            (intent) => ctx.aiRepository.getPeriodInsight(intent, state.filters, state.granularity, period),
+            (intent) => buildPeriodMessages(intent, scopeDescription, detail.comparison, rankedTrendFacts),
             "AI Risk Analyst — Period",
           );
           return aiHost;

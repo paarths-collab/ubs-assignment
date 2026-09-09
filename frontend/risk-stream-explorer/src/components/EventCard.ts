@@ -11,7 +11,7 @@ export function renderEventCard(event: StreamEvent, onClick: () => void): HTMLEl
     "button",
     {
       type: "button",
-      className: "event-card",
+      className: `event-card event-card--${event.severity.toLowerCase()}`,
       onclick: onClick,
       "aria-label": `Open event ${event.eventId}: ${event.eventTitle}`,
     },

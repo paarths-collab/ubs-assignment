@@ -8,6 +8,12 @@
       "port": 5183
     },
     {
+      "name": "risk-stream-explorer-dev-2",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--workspace=frontend/risk-stream-explorer", "--", "--port", "5187", "--strictPort"],
+      "port": 5187
+    },
+    {
       "name": "risk-relationship-network-dev",
       "runtimeExecutable": "bash",
       "runtimeArgs": [

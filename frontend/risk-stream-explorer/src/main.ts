@@ -79,7 +79,7 @@ function boot(): void {
       el("div", { className: "app-header__stats" }, [
         el("div", { className: "app-header__stat" }, [el("div", { className: "value" }, [String(repository.count())]), el("div", { className: "label" }, ["Total Events"])]),
         el("div", { className: "app-header__stat" }, [el("div", { className: "value" }, [String(orgCount)]), el("div", { className: "label" }, ["Organisations"])]),
-        el("div", { className: "app-header__stat" }, [el("div", { className: "value", style: "color:var(--accent-magenta)" }, [String(highCount)]), el("div", { className: "label" }, ["High Severity"])]),
+        el("div", { className: "app-header__stat" }, [el("div", { className: "value", style: "color:var(--accent-red)" }, [String(highCount)]), el("div", { className: "label" }, ["High Severity"])]),
       ]),
     ]),
   );
@@ -87,15 +87,20 @@ function boot(): void {
   const main = el("main", { className: "app-main", id: "main-content" });
   root.append(main);
 
-  const filterPanel = el("div", { className: "panel" });
-  filterPanel.append(renderFilterBar(ctx));
-  main.append(filterPanel);
-
-  const timelinePanel = el("div", { className: "panel" }, [
+  // The streamgraph is the visual centrepiece — it renders immediately
+  // below the header, before the filter controls, so it's always the first
+  // thing visible rather than being pushed below a tall filter form.
+  const timelinePanel = el("div", { className: "panel panel--hero" }, [
     el("div", { className: "panel__header" }, [el("span", { className: "panel__title" }, ["Narrative Timeline"])]),
   ]);
   main.append(timelinePanel);
   renderStreamGraph(ctx, timelinePanel);
+
+  const filterPanel = el("div", { className: "panel" }, [
+    el("div", { className: "panel__header" }, [el("span", { className: "panel__title" }, ["Filters & Grouping"])]),
+  ]);
+  filterPanel.append(renderFilterBar(ctx));
+  main.append(filterPanel);
 
   const investigationHost = el("div", {});
   main.append(investigationHost);

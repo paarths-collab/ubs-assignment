@@ -1,116 +1,120 @@
-import type { InsightPayload } from "@backend/index";
-import { INSUFFICIENT_EVIDENCE_TEXT } from "@backend/index";
-import { el } from "./dom";
-
-function renderPayload(payload: InsightPayload): HTMLElement {
-  if (payload.observed === INSUFFICIENT_EVIDENCE_TEXT) {
-    return el("div", { className: "ai-insufficient" }, [INSUFFICIENT_EVIDENCE_TEXT]);
-  }
-
-  const blocks: HTMLElement[] = [
-    el("div", {}, [
-      el("div", { className: "ai-answer__block-label" }, ["Observed"]),
-      el("div", { className: "ai-answer__text" }, [payload.observed]),
-    ]),
-    el("div", {}, [
-      el("div", { className: "ai-answer__block-label" }, ["Why it matters"]),
-      el("div", { className: "ai-answer__text" }, [payload.whyItMatters]),
-    ]),
-  ];
-
-  if (payload.drivers.length > 0) {
-    blocks.push(
-      el("div", {}, [
-        el("div", { className: "ai-answer__block-label" }, ["Drivers"]),
-        el("ul", { className: "ai-answer__list" }, payload.drivers.map((d) => el("li", {}, [d]))),
-      ]),
-    );
-  }
-
-  if (payload.investigate.length > 0) {
-    blocks.push(
-      el("div", {}, [
-        el("div", { className: "ai-answer__block-label" }, ["Investigate"]),
-        el("ul", { className: "ai-answer__list" }, payload.investigate.map((d) => el("li", {}, [d]))),
-      ]),
-    );
-  }
-
-  if (payload.controlConsiderations.length > 0) {
-    blocks.push(
-      el("div", {}, [
-        el("div", { className: "ai-answer__block-label" }, ["Control considerations"]),
-        el("ul", { className: "ai-answer__list" }, payload.controlConsiderations.map((d) => el("li", {}, [d]))),
-      ]),
-    );
-  }
-
-  if (payload.supportingEvidence.length > 0) {
-    blocks.push(
-      el("div", { className: "ai-answer__evidence" }, [
-        el("div", { className: "ai-answer__block-label" }, ["Supporting evidence"]),
-        ...payload.supportingEvidence.map((m) =>
-          el("div", { className: "ai-answer__evidence-row" }, [
-            el("span", { className: "label" }, [m.label]),
-            el("span", { className: "value" }, [m.value]),
-          ]),
-        ),
-      ]),
-    );
-  }
-
-  return el("div", { className: "ai-answer" }, blocks);
-}
+import { getApiKey, setApiKey } from "../state/apiKeyStore";
+import { LLMError, type ChatMessage, askLLM } from "../services/LLMClient";
+import { el, mount } from "./dom";
+import { renderLLMAnswer } from "./renderLLMAnswer";
 
 export interface AIActionSpec<TIntent extends string> {
   intent: TIntent;
   label: string;
 }
 
+function renderKeyGate(onSaved: () => void): HTMLElement {
+  const input = el("input", {
+    type: "password",
+    placeholder: "Paste your Groq API key",
+    className: "api-key-input",
+    "aria-label": "Groq API key",
+  }) as HTMLInputElement;
+
+  const save = () => {
+    if (input.value.trim().length === 0) return;
+    setApiKey(input.value);
+    onSaved();
+  };
+
+  return el("div", { className: "ai-key-gate" }, [
+    el("div", { className: "ai-key-gate__text" }, [
+      "This is a live AI feature — it sends the verified data below to Groq (model openai/gpt-oss-120b) over the internet. Enter your own Groq API key to enable it. The key is stored only in this browser's localStorage, never in this file.",
+    ]),
+    el("div", { className: "ai-key-gate__row" }, [
+      input,
+      el("button", { type: "button", className: "ai-action-btn", onclick: save }, ["Save key"]),
+    ]),
+  ]);
+}
+
 export function renderAIPanel<TIntent extends string>(
   container: HTMLElement,
   actions: AIActionSpec<TIntent>[],
-  getInsight: (intent: TIntent) => InsightPayload,
+  buildMessages: (intent: TIntent) => ChatMessage[],
   headerLabel: string,
 ): void {
   container.innerHTML = "";
   const buttons: Record<string, HTMLButtonElement> = {};
-  let activeIntent: TIntent | null = null;
-
   const answerHost = el("div", {});
 
-  const actionRow = el(
-    "div",
-    { className: "ai-action-row" },
-    actions.map((action) => {
-      const btn = el(
-        "button",
-        {
-          type: "button",
-          className: "ai-action-btn",
-          "aria-pressed": "false",
-          onclick: () => {
-            activeIntent = action.intent;
-            for (const [key, b] of Object.entries(buttons)) b.setAttribute("aria-pressed", String(key === action.intent));
-            answerHost.innerHTML = "";
-            answerHost.append(renderPayload(getInsight(action.intent)));
+  function renderGateOrActions(): void {
+    container.innerHTML = "";
+    const apiKey = getApiKey();
+
+    container.append(el("div", { className: "ai-panel__header" }, [el("span", {}, ["✦"]), headerLabel, el("span", { className: "ai-panel__live-badge" }, ["LIVE"])]));
+
+    if (!apiKey) {
+      container.append(renderKeyGate(renderGateOrActions));
+      return;
+    }
+
+    const actionRow = el(
+      "div",
+      { className: "ai-action-row" },
+      actions.map((action) => {
+        const btn = el(
+          "button",
+          {
+            type: "button",
+            className: "ai-action-btn",
+            "aria-pressed": "false",
+            onclick: () => runIntent(action.intent, btn),
           },
-        },
-        [action.label],
-      ) as HTMLButtonElement;
-      buttons[action.intent] = btn;
-      return btn;
-    }),
-  );
+          [action.label],
+        ) as HTMLButtonElement;
+        buttons[action.intent] = btn;
+        return btn;
+      }),
+    );
 
-  container.append(
-    el("div", { className: "ai-panel__header" }, [el("span", {}, ["✦"]), headerLabel]),
-    actionRow,
-    answerHost,
-  );
-
-  const first = actions[0];
-  if (first) {
-    (buttons[first.intent] as HTMLButtonElement).click();
+    answerHost.innerHTML = "";
+    container.append(actionRow, answerHost);
   }
+
+  async function runIntent(intent: TIntent, activeBtn: HTMLButtonElement): Promise<void> {
+    const apiKey = getApiKey();
+    if (!apiKey) {
+      renderGateOrActions();
+      return;
+    }
+
+    for (const [, b] of Object.entries(buttons)) b.setAttribute("aria-pressed", "false");
+    activeBtn.setAttribute("aria-pressed", "true");
+
+    answerHost.innerHTML = "";
+    answerHost.append(el("div", { className: "ai-loading" }, ["Asking Groq (openai/gpt-oss-120b)…"]));
+
+    try {
+      const messages = buildMessages(intent);
+      const text = await askLLM(apiKey, messages);
+      answerHost.innerHTML = "";
+      answerHost.append(renderLLMAnswer(text));
+    } catch (err) {
+      const message = err instanceof LLMError ? err.message : "Unexpected error contacting Groq.";
+      const isAuthIssue = err instanceof LLMError && (err.kind === "auth" || err.kind === "no-key");
+      mount(
+        answerHost,
+        el("div", { className: "ai-error" }, [message]),
+        isAuthIssue
+          ? el(
+              "button",
+              {
+                type: "button",
+                className: "btn-reset",
+                onclick: () => renderGateOrActions(),
+              },
+              ["Update API key"],
+            )
+          : null,
+      );
+    }
+  }
+
+  renderGateOrActions();
 }
