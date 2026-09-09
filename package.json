@@ -4,14 +4,18 @@
   "version": "1.0.0",
   "workspaces": [
     "backend/risk-stream-explorer",
-    "frontend/risk-stream-explorer"
+    "backend/risk-executive-overview",
+    "frontend/risk-stream-explorer",
+    "frontend/risk-executive-overview"
   ],
   "scripts": {
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
+    "dev:api": "npm run dev --workspace=backend/risk-executive-overview",
+    "dev:overview": "npm run dev --workspace=frontend/risk-executive-overview",
     "build": "npm run build --workspace=frontend/risk-stream-explorer",
-    "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json",
+    "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p backend/risk-executive-overview/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-executive-overview/tsconfig.json",
     "validate-data": "tsx backend/risk-stream-explorer/scripts/validate-data.ts"
   },
   "devDependencies": {
