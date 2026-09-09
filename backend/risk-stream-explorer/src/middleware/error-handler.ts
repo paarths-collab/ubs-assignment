@@ -36,14 +36,15 @@ export function errorHandler(error: FastifyError, request: FastifyRequest, reply
  * back to the app shell and let the frontend router resolve the path. API
  * routes and non-document requests still get the standard JSON 404.
  */
-export function makeNotFoundHandler(spaFile: string | null) {
+export function makeNotFoundHandler(resolveSpaFile: (() => string | null) | null) {
   return function notFoundHandler(request: FastifyRequest, reply: FastifyReply): void {
     const isDocumentRequest =
       request.method === "GET" &&
       !request.url.startsWith("/api/") &&
       (request.headers.accept ?? "").includes("text/html");
 
-    if (spaFile !== null && isDocumentRequest) {
+    const spaFile = resolveSpaFile !== null && isDocumentRequest ? resolveSpaFile() : null;
+    if (spaFile !== null) {
       void reply.sendFile(spaFile);
       return;
     }

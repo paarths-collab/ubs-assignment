@@ -45,13 +45,27 @@ function defaultDataDir(): string {
  * than a dev server, an API server and a `file://` page that browsers treat
  * as an opaque origin.
  */
-function resolveBuiltFrontend(): { dir: string; file: string } | null {
+function distDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const dir = path.resolve(here, "../../../dist");
+  return path.resolve(here, "../../../dist");
+}
+
+/**
+ * Resolved per request rather than cached at startup: the build writes
+ * `index.html` and then renames it, and a rebuild while the server is up
+ * would otherwise leave us serving a filename that no longer exists.
+ */
+function builtFrontendFile(): string | null {
+  const dir = distDir();
   for (const file of ["risk-stream-explorer.html", "index.html"]) {
-    if (fs.existsSync(path.join(dir, file))) return { dir, file };
+    if (fs.existsSync(path.join(dir, file))) return file;
   }
   return null;
+}
+
+function resolveBuiltFrontend(): { dir: string; file: string } | null {
+  const file = builtFrontendFile();
+  return file === null ? null : { dir: distDir(), file };
 }
 
 /**
@@ -116,11 +130,14 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
 
   if (builtFrontend) {
     await app.register(fastifyStatic, { root: builtFrontend.dir, index: false });
-    app.get("/", (_request, reply) => reply.sendFile(builtFrontend.file));
+    app.get("/", (_request, reply) => {
+      const file = builtFrontendFile();
+      return file === null ? reply.callNotFound() : reply.sendFile(file);
+    });
   }
 
   app.setErrorHandler(errorHandler);
-  app.setNotFoundHandler(makeNotFoundHandler(builtFrontend?.file ?? null));
+  app.setNotFoundHandler(makeNotFoundHandler(builtFrontend ? builtFrontendFile : null));
 
   registerHealthRoutes(app);
   registerPatternRoutes(app, dataset.patternRepository);
