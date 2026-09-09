@@ -1,0 +1,22 @@
+{
+  "name": "risk-stream-explorer-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend/risk-stream-explorer",
+    "frontend/risk-stream-explorer"
+  ],
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
+    "build": "npm run build --workspace=frontend/risk-stream-explorer",
+    "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json",
+    "validate-data": "tsx backend/risk-stream-explorer/scripts/validate-data.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "tsx": "^4.19.2"
+  }
+}
