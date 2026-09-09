@@ -1,0 +1,58 @@
+:root {
+  --bg-void: #05070a;
+  --bg-base: #0a0d12;
+  --bg-panel: #0e1219;
+  --bg-panel-raised: #131824;
+  --bg-inset: #080a0f;
+  --border-hairline: #1e2530;
+  --border-strong: #2a3341;
+
+  --text-primary: #e8edf4;
+  --text-secondary: #9aa7b8;
+  --text-muted: #5c6779;
+  --text-disabled: #3a4351;
+
+  --accent-cyan: #35e6e0;
+  --accent-cyan-dim: #1c8f8c;
+  --accent-cyan-glow: rgba(53, 230, 224, 0.18);
+
+  --accent-amber: #e8b34a;
+  --accent-amber-dim: #8a6a2c;
+  --accent-amber-glow: rgba(232, 179, 74, 0.16);
+
+  --accent-magenta: #ef4d8e;
+  --accent-magenta-dim: #8f2f57;
+  --accent-magenta-glow: rgba(239, 77, 142, 0.2);
+
+  --severity-low: #3a7d8c;
+  --severity-moderate: #e8b34a;
+  --severity-high: #ef4d8e;
+
+  --eventtype-financial: #35e6e0;
+  --eventtype-nonfinancial: #5c7ba8;
+
+  --positive: #4fd88a;
+  --negative: #ef4d8e;
+  --neutral: #7a8699;
+
+  --font-mono: "SF Mono", "IBM Plex Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --shadow-panel: 0 1px 0 rgba(255, 255, 255, 0.02) inset, 0 8px 24px rgba(0, 0, 0, 0.4);
+  --transition-fast: 120ms cubic-bezier(0.2, 0, 0, 1);
+  --transition-med: 220ms cubic-bezier(0.2, 0, 0, 1);
+
+  color-scheme: dark;
+}

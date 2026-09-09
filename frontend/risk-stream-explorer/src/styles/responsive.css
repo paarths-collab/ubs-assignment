@@ -1,0 +1,46 @@
+@media (max-width: 900px) {
+  .app-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+
+  .app-header__stats {
+    gap: var(--space-4);
+  }
+
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field {
+    min-width: 0;
+  }
+
+  .drawer {
+    width: 100vw;
+  }
+
+  .event-card {
+    grid-template-columns: 1fr;
+  }
+
+  .event-card__figures {
+    text-align: left;
+  }
+}
+
+@media (max-width: 560px) {
+  .app-main {
+    padding: var(--space-3);
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .app-header__stats {
+    display: none;
+  }
+}

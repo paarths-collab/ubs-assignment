@@ -10,7 +10,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
-    "build": "npm run build --workspace=frontend/risk-stream-explorer",
+    "build": "npm run build --workspace=frontend/risk-stream-explorer && node -e \"require('fs').renameSync('dist/index.html','dist/risk-stream-explorer.html')\"",
     "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json",
     "validate-data": "tsx backend/risk-stream-explorer/scripts/validate-data.ts"
   },
