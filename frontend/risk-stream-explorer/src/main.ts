@@ -17,6 +17,8 @@ import { renderFilterBar } from "./components/FilterBar";
 import { renderStreamGraph } from "./components/StreamGraph";
 import { renderPeriodInvestigation } from "./components/PeriodInvestigation";
 import { renderEventDrawer } from "./components/EventDrawer";
+import { renderLandingPage } from "./components/LandingPage";
+import { currentRoute, hrefFor, navigate, onRouteChange } from "./router";
 
 function renderFatalError(root: HTMLElement, message: string): void {
   root.innerHTML = "";
@@ -61,19 +63,46 @@ function boot(): void {
   }
 
   const repository = new EventRepository(loaded.events, loaded.detailsById);
-  const ctx = new AppContext(repository, loaded.aiData);
+
+  function renderRoute(): void {
+    if (currentRoute() === "streamgraph") {
+      renderStreamgraphPage(repository, loaded!.aiData, root!);
+    } else {
+      renderLandingPage(repository, root!);
+    }
+    window.scrollTo(0, 0);
+  }
+
+  onRouteChange(renderRoute);
+  renderRoute();
+}
+
+function renderStreamgraphPage(repository: EventRepository, aiData: unknown, root: HTMLElement): void {
+  const ctx = new AppContext(repository, aiData);
 
   root.innerHTML = "";
 
   root.append(el("a", { href: "#main-content", className: "skip-link" }, ["Skip to main content"]));
 
-  const highCount = loaded.events.filter((e) => e.severity === "High").length;
+  const highCount = repository.getAll().filter((e) => e.severity === "High").length;
   const orgCount = repository.getDistinctOrganisations().length;
 
   root.append(
     el("header", { className: "app-header" }, [
       el("div", {}, [
-        el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Risk Stream / Timeline Explorer"]),
+        el(
+          "a",
+          {
+            className: "app-header__back",
+            href: hrefFor("home"),
+            onclick: (event: MouseEvent) => {
+              event.preventDefault();
+              navigate("home");
+            },
+          },
+          ["← Operational Risk Workbench"],
+        ),
+        el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Streamgraph"]),
         el("div", { className: "app-header__breadcrumb" }, ["Enterprise Risk · Component 2"]),
       ]),
       el("div", { className: "app-header__stats" }, [
@@ -112,3 +141,4 @@ function boot(): void {
 }
 
 boot();
+
