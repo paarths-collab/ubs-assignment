@@ -42,6 +42,33 @@ export function renderLandingPage(repository: EventRepository, root: HTMLElement
     ],
   );
 
+  const patternsCard = el(
+    "a",
+    {
+      className: "component-card component-card--active",
+      href: hrefFor("patterns"),
+      onclick: (event: MouseEvent) => {
+        event.preventDefault();
+        navigate("patterns");
+      },
+    },
+    [
+      el("div", { className: "component-card__index" }, ["Component 4"]),
+      el("div", { className: "component-card__title" }, ["Pattern Intelligence"]),
+      el("div", { className: "component-card__subtitle" }, ["Investigation Workspace + AI Analyst"]),
+      el("p", { className: "component-card__body" }, [
+        "Browse the 22-item priority queue of statistically-detected patterns, drill into any pattern's verified evidence — matching events, enterprise comparison, workflow concentration, financial exposure — and ask an AI Analyst Assistant to interpret it. Every number and Event ID is code-verified; the AI only interprets, it never invents facts.",
+      ]),
+      el("div", { className: "component-card__tags" }, [
+        el("span", { className: "component-card__tag" }, ["Priority queue"]),
+        el("span", { className: "component-card__tag" }, ["Deterministic evidence"]),
+        el("span", { className: "component-card__tag" }, ["Server-side Groq"]),
+        el("span", { className: "component-card__tag" }, ["Synthetic data"]),
+      ]),
+      el("div", { className: "component-card__cta" }, ["Open Pattern Intelligence →"]),
+    ],
+  );
+
   root.innerHTML = "";
   root.append(
     el("header", { className: "landing-header" }, [
@@ -78,7 +105,7 @@ export function renderLandingPage(repository: EventRepository, root: HTMLElement
           el("span", { className: "panel__title" }, ["Components"]),
         ]),
         el("div", { className: "panel__body" }, [
-          el("div", { className: "component-grid" }, [streamgraphCard]),
+          el("div", { className: "component-grid" }, [streamgraphCard, patternsCard]),
         ]),
       ]),
     ]),

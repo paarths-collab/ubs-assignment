@@ -18,6 +18,8 @@ import { renderStreamGraph } from "./components/StreamGraph";
 import { renderPeriodInvestigation } from "./components/PeriodInvestigation";
 import { renderEventDrawer } from "./components/EventDrawer";
 import { renderLandingPage } from "./components/LandingPage";
+import { renderPatternIntelligencePage } from "./components/PatternIntelligencePage";
+import { renderGraphPage } from "./graph";
 import { currentRoute, hrefFor, navigate, onRouteChange } from "./router";
 
 function renderFatalError(root: HTMLElement, message: string): void {
@@ -65,8 +67,13 @@ function boot(): void {
   const repository = new EventRepository(loaded.events, loaded.detailsById);
 
   function renderRoute(): void {
-    if (currentRoute() === "streamgraph") {
+    const route = currentRoute();
+    if (route === "streamgraph") {
       renderStreamgraphPage(repository, loaded!.aiData, root!);
+    } else if (route === "patterns") {
+      renderPatternIntelligencePage(root!);
+    } else if (route === "graph") {
+      renderGraphPage(root!, () => navigate("home"), hrefFor("home"));
     } else {
       renderLandingPage(repository, root!);
     }
