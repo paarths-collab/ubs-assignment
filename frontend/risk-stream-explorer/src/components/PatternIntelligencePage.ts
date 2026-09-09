@@ -50,6 +50,26 @@ export function renderPatternIntelligencePage(root: HTMLElement): void {
     ]),
   );
 
+  main.append(
+    el("div", { className: "issues-intro" }, [
+      el("p", {}, [
+        "Looking for where to start? ",
+        el(
+          "a",
+          {
+            href: hrefFor("issues"),
+            onclick: (event: MouseEvent) => {
+              event.preventDefault();
+              navigate("issues");
+            },
+          },
+          ["Issue Intelligence"],
+        ),
+        " ranks the 15 issue categories by transparent, named signals and surfaces the patterns below as supporting evidence inside each issue's analysis.",
+      ]),
+    ]),
+  );
+
   const priorityPanel = el("div", { className: "panel" }, [
     el("div", { className: "panel__header" }, [el("span", { className: "panel__title" }, ["Priority Queue — 22 Candidate Investigations"])]),
   ]);

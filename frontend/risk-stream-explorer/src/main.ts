@@ -19,6 +19,7 @@ import { renderPeriodInvestigation } from "./components/PeriodInvestigation";
 import { renderEventDrawer } from "./components/EventDrawer";
 import { renderLandingPage } from "./components/LandingPage";
 import { renderPatternIntelligencePage } from "./components/PatternIntelligencePage";
+import { renderIssuesPage } from "./components/IssuesPage";
 import { renderGraphPage } from "./graph";
 import { currentRoute, hrefFor, navigate, onRouteChange } from "./router";
 
@@ -70,6 +71,8 @@ function boot(): void {
     const route = currentRoute();
     if (route === "streamgraph") {
       renderStreamgraphPage(repository, loaded!.aiData, root!);
+    } else if (route === "issues") {
+      renderIssuesPage(root!);
     } else if (route === "patterns") {
       renderPatternIntelligencePage(root!);
     } else if (route === "graph") {

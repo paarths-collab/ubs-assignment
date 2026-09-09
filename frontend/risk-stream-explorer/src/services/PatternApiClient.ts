@@ -1,4 +1,5 @@
 import type { AiPatternResponse, ApiErrorBody, Investigation, Pattern, PriorityPatternsResponse, RiskEvent } from "../types/pattern";
+import type { AiIssueResponse, IssueDetailResponse, IssuesListResponse } from "../types/issue";
 
 /**
  * Component 4 calls its own backend only — never Groq directly, and never
@@ -67,4 +68,27 @@ export async function fetchAiAnalysis(patternId: string): Promise<AiPatternRespo
     throw new ApiError(await readErrorMessage(res, `AI request failed (${res.status})`), res.status);
   }
   return (await res.json()) as AiPatternResponse;
+}
+
+// ---------- Issue intelligence ----------
+
+export function fetchRankedIssues(): Promise<IssuesListResponse> {
+  return getJson("/api/issues");
+}
+
+export function fetchIssueDetail(issueSlug: string): Promise<IssueDetailResponse> {
+  return getJson(`/api/issues/${encodeURIComponent(issueSlug)}`);
+}
+
+export async function fetchIssueAiAnalysis(issueSlug: string): Promise<AiIssueResponse> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}/api/ai/issue/${encodeURIComponent(issueSlug)}`, { method: "POST" });
+  } catch {
+    throw new ApiError("Could not reach the Pattern Intelligence backend — is it running?", 0);
+  }
+  if (!res.ok) {
+    throw new ApiError(await readErrorMessage(res, `AI request failed (${res.status})`), res.status);
+  }
+  return (await res.json()) as AiIssueResponse;
 }
