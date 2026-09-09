@@ -41,22 +41,26 @@ function colorFor(groupBy: string, key: string, allKeys: string[]): string {
 
 export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void {
   const legendEl = el("div", { className: "streamgraph-legend" });
+  const hintEl = el("div", { className: "streamgraph-hint" }, [
+    "Hover a point for a quick preview · click it to investigate the full period below.",
+  ]);
   const svgWrap = el("div", { className: "streamgraph-container" });
-  // A normal in-flow HTML block below the chart — not an absolutely
-  // positioned overlay — so hovering a period can never cover the graph
-  // itself. It always reserves its own space; content swaps on hover/focus.
-  const scorecard = el("div", { className: "streamgraph-scorecard", role: "status", "aria-live": "polite" });
-  showScorecardPlaceholder(scorecard);
+  // A floating tooltip that follows the cursor, offset above it — never
+  // pinned to a fixed spot on the chart (which used to cover whatever the
+  // graph was showing there) and never able to intercept the mouse itself
+  // (pointer-events: none), so it can't interfere with hovering/clicking.
+  const tooltip = el("div", { className: "streamgraph-tooltip", role: "status", "aria-live": "polite" });
   const accessibleTableWrap = el("div", { className: "streamgraph-accessible-table" });
 
-  container.append(legendEl, svgWrap, scorecard, accessibleTableWrap);
+  svgWrap.append(tooltip);
+  container.append(legendEl, hintEl, svgWrap, accessibleTableWrap);
 
   function draw(): void {
     // The hit-rects driving hover are destroyed and rebuilt below, which
-    // never fires a mouseleave — reset the scorecard to its placeholder
-    // explicitly so it can't keep showing a previous period's data after
-    // the underlying element is gone.
-    showScorecardPlaceholder(scorecard);
+    // never fires a mouseleave — hide any stale tooltip explicitly so it
+    // can't keep showing a previous period's data after the underlying
+    // element is gone.
+    tooltip.classList.remove("is-visible");
 
     const state = ctx.getState();
     const filteredEvents = ctx.getFilteredEvents();
@@ -74,7 +78,7 @@ export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void
     }
     svgWrap.querySelector(".empty-state")?.remove();
 
-    drawSvg(svgWrap, scorecard, data, periods, filteredEvents, state, ctx);
+    drawSvg(svgWrap, tooltip, data, periods, filteredEvents, state, ctx);
   }
 
   ctx.subscribe(draw);
@@ -148,7 +152,7 @@ function renderAccessibleTable(wrap: HTMLElement, data: { seriesKeys: string[]; 
 
 function drawSvg(
   svgWrap: HTMLElement,
-  scorecard: HTMLElement,
+  tooltip: HTMLElement,
   data: { seriesKeys: string[]; points: StreamPoint[] },
   periods: Period[],
   filteredEvents: StreamEvent[],
@@ -290,55 +294,61 @@ function drawSvg(
           ctx.selectPeriod(point.periodId);
         }
       })
-      .on("mouseenter", () => showScorecard(scorecard, point, periods, filteredEvents))
-      .on("mouseleave", () => showScorecardPlaceholder(scorecard))
-      .on("focus", () => showScorecard(scorecard, point, periods, filteredEvents));
+      .on("mouseenter", (event: MouseEvent) =>
+        showTooltip(tooltip, svgWrap, point, periods, filteredEvents, event.clientX, event.clientY),
+      )
+      .on("mousemove", (event: MouseEvent) =>
+        showTooltip(tooltip, svgWrap, point, periods, filteredEvents, event.clientX, event.clientY),
+      )
+      .on("mouseleave", () => tooltip.classList.remove("is-visible"))
+      .on("focus", () => showTooltip(tooltip, svgWrap, point, periods, filteredEvents, null, null));
   });
 
   svgWrap.append(svg.node()!);
 }
 
-function scorecardStat(label: string, value: string): HTMLElement {
-  return el("div", { className: "streamgraph-scorecard__stat" }, [
-    el("div", { className: "streamgraph-scorecard__stat-label" }, [label]),
-    el("div", { className: "streamgraph-scorecard__stat-value" }, [value]),
+function tooltipStat(label: string, value: string): HTMLElement {
+  return el("div", { className: "streamgraph-tooltip__stat" }, [
+    el("span", { className: "streamgraph-tooltip__stat-label" }, [label]),
+    el("span", { className: "streamgraph-tooltip__stat-value" }, [value]),
   ]);
 }
 
-function showScorecardPlaceholder(scorecard: HTMLElement): void {
-  scorecard.innerHTML = "";
-  scorecard.classList.add("is-placeholder");
-  scorecard.append(
-    el("div", { className: "streamgraph-scorecard__hint" }, [
-      "Hover a point on the timeline for a quick preview, or click it to investigate the full period below.",
-    ]),
-  );
+function formatDateRange(startDate: string, endDate: string): string {
+  return startDate === endDate ? startDate : `${startDate} → ${endDate}`;
 }
 
 /**
- * Renders period preview stats into a normal in-flow block below the chart
- * (never an overlay on top of it) so hovering the timeline can never hide
- * the lines/areas underneath — the exact problem with the old floating
- * tooltip implementation.
+ * Positions and fills the floating tooltip. It has `pointer-events: none`
+ * (see CSS) so it can never intercept the mouse or block interaction with
+ * the chart underneath, and it's offset above-and-right of the cursor
+ * (flipping to stay inside the chart near the edges) rather than pinned to
+ * a fixed spot on the chart — the fixed-position version used to cover
+ * whatever the graph was showing there regardless of where you hovered.
  */
-function showScorecard(
-  scorecard: HTMLElement,
+function showTooltip(
+  tooltip: HTMLElement,
+  svgWrap: HTMLElement,
   point: StreamPoint,
   periods: Period[],
   filteredEvents: StreamEvent[],
+  clientX: number | null,
+  clientY: number | null,
 ): void {
   const period = periods.find((p) => p.id === point.periodId);
-  scorecard.innerHTML = "";
-  scorecard.classList.remove("is-placeholder");
+
+  tooltip.innerHTML = "";
+  tooltip.append(
+    el("div", { className: "streamgraph-tooltip__date" }, [
+      period ? formatDateRange(period.startDate, period.endDate) : point.label,
+    ]),
+    el("div", { className: "streamgraph-tooltip__total" }, [point.label, ` — ${point.total} events`]),
+  );
 
   const topSeries = Object.entries(point.series)
     .filter(([, v]) => v > 0)
     .sort(([, a], [, b]) => b - a)[0];
-
-  const stats: HTMLElement[] = [
-    scorecardStat(point.label, `${point.total} events`),
-    ...(topSeries ? [scorecardStat("Largest series", `${topSeries[0]} (${topSeries[1]})`)] : []),
-  ];
+  const stats: HTMLElement[] = topSeries ? [tooltipStat("Largest series", `${topSeries[0]} (${topSeries[1]})`)] : [];
 
   if (period) {
     const periodEvents = getEventsInPeriod(filteredEvents, period);
@@ -349,20 +359,46 @@ function showScorecard(
       endDate: period.endDate,
     });
     stats.push(
-      scorecardStat("High severity", formatPercent(metrics.severityShares.High)),
-      scorecardStat(
+      tooltipStat("High severity", formatPercent(metrics.severityShares.High)),
+      tooltipStat(
         "Net exposure",
         formatMoney(metrics.financial.netAmount.populatedCount > 0 ? metrics.financial.netAmount.total : null),
       ),
-      scorecardStat(
+      tooltipStat(
         "Potential impact",
         formatMoney(metrics.financial.potentialImpact.populatedCount > 0 ? metrics.financial.potentialImpact.total : null),
       ),
     );
   }
 
-  scorecard.append(
-    el("div", { className: "streamgraph-scorecard__stats" }, stats),
-    el("div", { className: "streamgraph-scorecard__hint" }, ["Click this point on the timeline to investigate the full period below."]),
+  tooltip.append(
+    el("div", { className: "streamgraph-tooltip__stats" }, stats),
+    el("div", { className: "streamgraph-tooltip__hint" }, ["Click to investigate this period"]),
   );
+  tooltip.classList.add("is-visible");
+
+  const wrapRect = svgWrap.getBoundingClientRect();
+  const tooltipWidth = tooltip.offsetWidth || 220;
+  const tooltipHeight = tooltip.offsetHeight || 90;
+  const gap = 14;
+
+  // Anchor near the cursor when we have a real position, else near the
+  // top of the chart (keyboard focus has no mouse coordinates).
+  const anchorX = clientX !== null ? clientX - wrapRect.left : wrapRect.width / 2;
+  const anchorY = clientY !== null ? clientY - wrapRect.top : 0;
+
+  let left = anchorX + gap;
+  if (left + tooltipWidth > wrapRect.width - 4) {
+    left = anchorX - gap - tooltipWidth; // flip to the left of the cursor
+  }
+  left = Math.min(Math.max(left, 4), Math.max(4, wrapRect.width - tooltipWidth - 4));
+
+  let top = anchorY - tooltipHeight - gap; // sit above the cursor by default
+  if (top < 4) {
+    top = anchorY + gap; // not enough room above — sit below instead
+  }
+  top = Math.min(Math.max(top, 4), Math.max(4, wrapRect.height - tooltipHeight - 4));
+
+  tooltip.style.left = `${left}px`;
+  tooltip.style.top = `${top}px`;
 }

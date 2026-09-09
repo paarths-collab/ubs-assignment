@@ -263,53 +263,81 @@ button {
   pointer-events: none;
 }
 
-/*
- * The period preview lives in normal document flow below the chart — never
- * an absolutely positioned overlay — specifically so it can't cover the
- * streamgraph while hovering. It has a fixed min-height so the layout
- * doesn't jump between the placeholder and populated states.
- */
-.streamgraph-scorecard {
-  margin: 0 var(--space-4) var(--space-3);
-  padding: var(--space-3);
-  min-height: 62px;
-  background: var(--bg-inset);
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--space-2);
-}
-
-.streamgraph-scorecard.is-placeholder {
-  border-style: dashed;
-}
-
-.streamgraph-scorecard__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-5);
-}
-
-.streamgraph-scorecard__stat-label {
-  font-size: 10px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-  margin-bottom: 2px;
-}
-
-.streamgraph-scorecard__stat-value {
-  font-family: var(--font-mono);
-  font-size: 14px;
-  color: var(--text-primary);
-  font-weight: 600;
-}
-
-.streamgraph-scorecard__hint {
+.streamgraph-hint {
+  padding: 0 var(--space-4) var(--space-2);
   color: var(--text-muted);
   font-size: 11px;
+}
+
+/*
+ * Floating tooltip that tracks the cursor. `pointer-events: none` means it
+ * can never intercept the mouse or block clicks/hover on the chart below
+ * it — it is purely visual. JS offsets it above-and-right of the cursor
+ * (flipping near edges) rather than pinning it to a fixed spot, which is
+ * what used to let it cover whatever the graph was showing there.
+ */
+.streamgraph-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  font-size: 12px;
+  min-width: 210px;
+  max-width: 260px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  z-index: 50;
+  opacity: 0;
+  transition: opacity var(--transition-fast);
+}
+
+.streamgraph-tooltip.is-visible {
+  opacity: 1;
+}
+
+.streamgraph-tooltip__date {
+  font-family: var(--font-mono);
+  color: var(--accent-amber);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.streamgraph-tooltip__total {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.streamgraph-tooltip__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+
+.streamgraph-tooltip__stat {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.streamgraph-tooltip__stat-label {
+  color: var(--text-muted);
+}
+
+.streamgraph-tooltip__stat-value {
+  font-family: var(--font-mono);
+  color: var(--text-secondary);
+  text-align: right;
+}
+
+.streamgraph-tooltip__hint {
+  color: var(--text-muted);
+  font-size: 10px;
+  border-top: 1px solid var(--border-hairline);
+  padding-top: 6px;
 }
 
 .streamgraph-accessible-table {
