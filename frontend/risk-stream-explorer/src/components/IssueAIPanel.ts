@@ -39,9 +39,12 @@ function renderSuccess(container: HTMLElement, response: AiIssueResponse & { sta
   }
 }
 
-function renderFallback(container: HTMLElement, response: AiIssueResponse & { status: "fallback" }): void {
+function renderFallback(container: HTMLElement, response: AiIssueResponse & { status: "fallback" }, onRetry: () => void): void {
   container.innerHTML = "";
-  container.append(el("div", { className: "ai-fallback-note" }, [response.message]));
+  container.append(
+    el("div", { className: "ai-fallback-note" }, [response.message]),
+    el("button", { type: "button", className: "btn-reset", onclick: onRetry }, ["Try again"]),
+  );
 }
 
 function renderError(container: HTMLElement, message: string, onRetry: () => void): void {
@@ -52,14 +55,28 @@ function renderError(container: HTMLElement, message: string, onRetry: () => voi
   );
 }
 
+function renderIdle(container: HTMLElement, onRun: () => void): void {
+  container.innerHTML = "";
+  container.append(
+    el("div", { className: "ai-idle" }, [
+      el("p", { className: "ai-idle__text" }, [
+        "The analysis on the left is already complete and fully deterministic. Groq adds interpretation only — why this may matter, what to investigate, and where the evidence is weak.",
+      ]),
+      el("button", { type: "button", className: "btn-run-ai", onclick: onRun }, ["Run AI analysis"]),
+    ]),
+  );
+}
+
 /**
- * The "AI Analyst Assistant" panel for one issue — loads independently from
- * the deterministic issue detail panel next to it (already rendered, never
- * waits on this). Calls POST /api/ai/issue/:issueSlug, which never calls
- * Groq from the browser and never trusts Groq for numbers/IDs — only the
- * five prose fields below are Groq-sourced, clearly labelled as such. The
- * model is explicitly instructed to challenge the evidence, not just
- * support it — "Why it may matter" and "Limitations" are where that shows up.
+ * The "AI Analyst Assistant" panel for one issue. Nothing is requested until
+ * the analyst asks for it: the deterministic panel beside this one is the
+ * product, and an LLM call costs tokens and latency for an answer that is
+ * interpretation rather than evidence — so it stays behind an explicit
+ * button. Calls POST /api/ai/issue/:issueSlug, which never calls Groq from
+ * the browser and never trusts Groq for numbers/IDs — only the five prose
+ * fields below are Groq-sourced, clearly labelled as such. The model is
+ * explicitly instructed to challenge the evidence, not just support it —
+ * "Why it may matter" and "Limitations" are where that shows up.
  */
 export function renderIssueAIPanel(container: HTMLElement, issueSlug: string, onOpenEvent: (eventId: string) => void): void {
   container.innerHTML = "";
@@ -81,7 +98,7 @@ export function renderIssueAIPanel(container: HTMLElement, issueSlug: string, on
         if (response.status === "ok") {
           renderSuccess(body, response, onOpenEvent);
         } else {
-          renderFallback(body, response);
+          renderFallback(body, response, load);
         }
       })
       .catch((err: unknown) => {
@@ -90,5 +107,5 @@ export function renderIssueAIPanel(container: HTMLElement, issueSlug: string, on
       });
   }
 
-  load();
+  renderIdle(body, load);
 }

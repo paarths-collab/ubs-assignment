@@ -17,10 +17,21 @@
   color: var(--accent-amber);
 }
 
+/*
+ * The deterministic analysis carries dense tables (root cause, organisation,
+ * enterprise comparison) and needs the room; the AI column holds prose and
+ * reads fine narrower, so the split is deliberately lopsided rather than even.
+ */
 @media (min-width: 1100px) {
   .section-grid--investigation {
-    grid-template-columns: 1.15fr 0.85fr;
+    grid-template-columns: minmax(0, 1.9fr) minmax(320px, 0.9fr);
     align-items: start;
+  }
+}
+
+@media (min-width: 1600px) {
+  .section-grid--investigation {
+    grid-template-columns: minmax(0, 2.2fr) minmax(360px, 0.8fr);
   }
 }
 
@@ -261,6 +272,43 @@
   font-size: 10px;
   color: var(--text-muted);
   margin-top: var(--space-1);
+}
+
+.ai-idle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.ai-idle__text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.btn-run-ai {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bg-base);
+  background: var(--accent-amber);
+  border: 1px solid var(--accent-amber);
+  border-radius: var(--radius-md);
+  padding: 9px var(--space-4);
+  cursor: pointer;
+  transition: filter var(--transition-fast);
+}
+
+.btn-run-ai:hover {
+  filter: brightness(1.12);
+}
+
+.btn-run-ai:focus-visible {
+  outline: 2px solid var(--accent-amber);
+  outline-offset: 2px;
 }
 
 /* ---------- Component 4: Issue Intelligence ---------- */
