@@ -16,7 +16,7 @@ const EnvSchema = z.object({
   // OpenRouter is OpenAI-API-compatible, so it needs no extra SDK.
   LLM_PROVIDER: z.enum(["groq", "openrouter"]).optional(),
   OPENROUTER_API_KEY: z.string().min(1).optional(),
-  OPENROUTER_MODEL: z.string().default("deepseek/deepseek-chat"),
+  OPENROUTER_MODEL: z.string().default("deepseek/deepseek-v4-flash"),
   OPENROUTER_BASE_URL: z.string().default("https://openrouter.ai/api/v1"),
 });
 
