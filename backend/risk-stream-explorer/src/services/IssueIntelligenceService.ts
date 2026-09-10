@@ -2,6 +2,8 @@ import type { RiskEventRepository } from "../repositories/RiskEventRepository";
 import type { PatternRepository } from "../repositories/PatternRepository";
 import type { EnterpriseBaseline, RiskEvent } from "../types/RiskEvent";
 import type {
+  CounterSignal,
+  CounterSignalId,
   IssueDetailResponse,
   IssueEvidencePayload,
   IssueFinancials,
@@ -21,7 +23,13 @@ import type {
   TriggeredSignal,
   WorkflowConcentrationEntry,
 } from "../types/Issue";
-import { ISSUE_SIGNAL_THRESHOLDS as T, SIGNAL_LABELS, SIGNAL_WEIGHTS } from "../config/issueSignals";
+import {
+  COUNTER_SIGNAL_LABELS,
+  ISSUE_SIGNAL_THRESHOLDS as T,
+  SIGNAL_LABELS,
+  SIGNAL_TIE_BREAK_PRIORITY,
+  SIGNAL_WEIGHTS,
+} from "../config/issueSignals";
 import { aggregateMoney, groupBy, meanNullable, medianNullable, round1, round2 } from "../utils/riskMath";
 import { slugify } from "../utils/slug";
 
@@ -136,15 +144,18 @@ export class IssueIntelligenceService {
     const trend = computeTrend(events, globalLastMonth);
     const matchingEventIds = [...events.map((e) => e.event_id)].sort();
 
-    const triggeredSignals = computeTriggeredSignals({
+    const signalInputs: SignalInputs = {
       severity,
       openWorkload,
       financials,
       netExposureConcentration,
       strongestRootCauseCombination,
       timeliness,
-    });
+      organisationBreakdown,
+    };
+    const triggeredSignals = tierSignals(computeTriggeredSignals(signalInputs));
     const rankScore = triggeredSignals.reduce((sum, s) => sum + s.weight, 0);
+    const counterSignals = computeCounterSignals(signalInputs, trend);
 
     return {
       issue,
@@ -163,6 +174,7 @@ export class IssueIntelligenceService {
       matchingEventIds,
       relatedPatterns,
       triggeredSignals,
+      counterSignals,
       rankScore,
     };
   }
@@ -350,15 +362,38 @@ interface SignalInputs {
   netExposureConcentration: NetExposureConcentration;
   strongestRootCauseCombination: RootCauseBreakdownEntry | null;
   timeliness: IssueTimeliness;
+  organisationBreakdown: OrganisationBreakdownEntry[];
 }
 
-function triggeredSignal(id: SignalId, detail: string): TriggeredSignal {
+/** A triggered signal before tiering has assigned it "primary"/"secondary". */
+type UntieredSignal = Omit<TriggeredSignal, "tier">;
+
+function triggeredSignal(id: SignalId, detail: string): UntieredSignal {
   return { id, label: SIGNAL_LABELS[id], detail, weight: SIGNAL_WEIGHTS[id] };
 }
 
-function computeTriggeredSignals(inputs: SignalInputs): TriggeredSignal[] {
-  const signals: TriggeredSignal[] = [];
-  const { severity, openWorkload, financials, netExposureConcentration, strongestRootCauseCombination, timeliness } = inputs;
+/**
+ * Assigns `tier`: the single highest-weighted signal is "primary", the rest
+ * are "secondary". Ties on weight are broken by `SIGNAL_TIE_BREAK_PRIORITY`
+ * (see that constant's doc comment for why root-cause interaction outranks
+ * general severity concentration). Order of the input array is otherwise
+ * preserved.
+ */
+function tierSignals(signals: UntieredSignal[]): TriggeredSignal[] {
+  if (signals.length === 0) return [];
+  const maxWeight = Math.max(...signals.map((s) => s.weight));
+  const tiedForMax = signals.filter((s) => s.weight === maxWeight);
+  const primaryId =
+    tiedForMax.length === 1
+      ? tiedForMax[0]!.id
+      : (SIGNAL_TIE_BREAK_PRIORITY.find((id) => tiedForMax.some((s) => s.id === id)) ?? tiedForMax[0]!.id);
+  return signals.map((s) => ({ ...s, tier: s.id === primaryId ? "primary" : "secondary" }));
+}
+
+function computeTriggeredSignals(inputs: SignalInputs): UntieredSignal[] {
+  const signals: UntieredSignal[] = [];
+  const { severity, openWorkload, financials, netExposureConcentration, strongestRootCauseCombination, timeliness, organisationBreakdown } =
+    inputs;
 
   if (severity.high_rate_lift >= T.HIGH_RATE_LIFT_MIN) {
     signals.push(
@@ -436,7 +471,155 @@ function computeTriggeredSignals(inputs: SignalInputs): TriggeredSignal[] {
     );
   }
 
+  const orgSpread = organisationHighRateSpread(organisationBreakdown);
+  if (orgSpread !== null && orgSpread.spread_pct >= T.ORG_HIGH_RATE_VARIATION_SPREAD_MIN_PCT) {
+    signals.push(
+      triggeredSignal(
+        "ORG_HIGH_RATE_VARIATION",
+        `High rate varies ${orgSpread.spread_pct} points by organisation — ${orgSpread.highest.organisation} runs ${orgSpread.highest.high_rate_pct}% (${orgSpread.highest.high_count}/${orgSpread.highest.event_count}) vs ${orgSpread.lowest.organisation} at ${orgSpread.lowest.high_rate_pct}% (${orgSpread.lowest.high_count}/${orgSpread.lowest.event_count}) — small per-org High counts, so treat this as directional.`,
+      ),
+    );
+  }
+
   return signals;
+}
+
+/** Highest- and lowest-High-rate organisation for an issue, and the spread between them. Null when there are fewer than two organisations to compare (never happens in this dataset — every issue spans exactly 4 — but keeps the function total). */
+function organisationHighRateSpread(
+  breakdown: OrganisationBreakdownEntry[],
+): { spread_pct: number; highest: OrganisationBreakdownEntry; lowest: OrganisationBreakdownEntry } | null {
+  if (breakdown.length < 2) return null;
+  // organisationBreakdown is already sorted by high_rate_pct descending (see computeOrganisationBreakdown).
+  const highest = breakdown[0]!;
+  const lowest = breakdown[breakdown.length - 1]!;
+  return { spread_pct: round1(highest.high_rate_pct - lowest.high_rate_pct), highest, lowest };
+}
+
+function counterSignal(id: CounterSignalId, detail: string): CounterSignal {
+  return { id, label: COUNTER_SIGNAL_LABELS[id], detail };
+}
+
+/**
+ * Counter-signals name dimensions on which this issue is NOT unusual. Each
+ * check below is the honest negation of a triggered-signal check (or, for
+ * trend, a direct read of the already-computed field) — an issue can never
+ * carry both a signal and its counter-signal for the same dimension. If none
+ * of the seven checks hold, the array is empty; nothing is invented to fill
+ * it.
+ */
+function computeCounterSignals(inputs: SignalInputs, trend: IssueTrend): CounterSignal[] {
+  const counters: CounterSignal[] = [];
+  const { severity, openWorkload, strongestRootCauseCombination, timeliness } = inputs;
+
+  const det = timeliness.detection_delay;
+  if (det.mean_days !== null && det.delta_days !== null && Math.abs(det.delta_days) <= T.DETECTION_NEAR_BASELINE_MAX_ABS_DELTA_DAYS) {
+    counters.push(
+      counterSignal(
+        "DETECTION_NEAR_BASELINE",
+        `Detection delay averages ${det.mean_days}d against an enterprise mean of ${det.enterprise_mean_days}d — essentially at baseline.`,
+      ),
+    );
+  }
+
+  const rec = timeliness.recording_delay;
+  if (rec.mean_days !== null && rec.delta_days !== null && Math.abs(rec.delta_days) <= T.RECORDING_NEAR_BASELINE_MAX_ABS_DELTA_DAYS) {
+    counters.push(
+      counterSignal(
+        "RECORDING_NEAR_BASELINE",
+        `Recording delay averages ${rec.mean_days}d against an enterprise mean of ${rec.enterprise_mean_days}d — essentially at baseline.`,
+      ),
+    );
+  }
+
+  const journey = timeliness.occurrence_to_record;
+  if (
+    journey.mean_days !== null &&
+    journey.delta_days !== null &&
+    Math.abs(journey.delta_days) <= T.JOURNEY_NEAR_BASELINE_MAX_ABS_DELTA_DAYS
+  ) {
+    counters.push(
+      counterSignal(
+        "JOURNEY_NEAR_BASELINE",
+        `Occurrence-to-record time averages ${journey.mean_days}d against an enterprise mean of ${journey.enterprise_mean_days}d — essentially at baseline.`,
+      ),
+    );
+  }
+
+  if (Math.abs(round1(openWorkload.open_rate_pct - openWorkload.enterprise_open_rate_pct)) <= T.OPEN_RATE_NEAR_BASELINE_MAX_ABS_DELTA_PCT) {
+    counters.push(
+      counterSignal(
+        "OPEN_RATE_NEAR_BASELINE",
+        `${openWorkload.open_rate_pct}% of events are open against an enterprise rate of ${openWorkload.enterprise_open_rate_pct}% — near baseline.`,
+      ),
+    );
+  }
+
+  if (severity.high_rate_pct <= severity.enterprise_high_rate_pct) {
+    counters.push(
+      counterSignal(
+        "SEVERITY_AT_OR_BELOW_BASELINE",
+        `${severity.high_rate_pct}% of events are High-severity, at or below the ${severity.enterprise_high_rate_pct}% enterprise rate.`,
+      ),
+    );
+  }
+
+  if (!trend.material_change) {
+    counters.push(counterSignal("NO_MATERIAL_TREND", trend.note));
+  }
+
+  if (!(strongestRootCauseCombination && strongestRootCauseCombination.high_rate_lift >= T.ROOT_CAUSE_COMBO_LIFT_MIN)) {
+    const detail = strongestRootCauseCombination
+      ? `The strongest root-cause combination ("${strongestRootCauseCombination.root_cause}", ${strongestRootCauseCombination.event_count} events, ${strongestRootCauseCombination.high_count} High) runs at ${strongestRootCauseCombination.high_rate_lift}x the enterprise High rate — below the ${T.ROOT_CAUSE_COMBO_LIFT_MIN}x threshold for a strong interaction.`
+      : `No root-cause combination for this issue clears the minimum support threshold (${T.ROOT_CAUSE_COMBO_MIN_SUPPORT} events) for a reliable lift estimate.`;
+    counters.push(counterSignal("NO_STRONG_ROOT_CAUSE_INTERACTION", detail));
+  }
+
+  return counters;
+}
+
+/**
+ * One deterministic sentence built from the issue's primary (highest-tier)
+ * triggered signal — this is what the "Issues Requiring Attention" cards
+ * lead with, so it stays a short headline rather than the full `detail`
+ * sentence. When no signal triggered at all (rankScore 0), a fixed fallback
+ * sentence is used instead of inventing a reason.
+ */
+function buildWhyItSurfaced(profile: IssueProfile): string {
+  const primary = profile.triggeredSignals.find((s) => s.tier === "primary");
+  if (!primary) {
+    return "No signal cleared threshold — this issue tracks at or near enterprise baseline across every measured dimension.";
+  }
+
+  switch (primary.id) {
+    case "STRONG_ROOT_CAUSE_INTERACTION": {
+      const c = profile.strongestRootCauseCombination;
+      return c ? `${c.high_rate_lift}x High concentration in one root-cause combination` : primary.label;
+    }
+    case "HIGH_SEVERITY_CONCENTRATION":
+      return `${profile.severity.high_rate_lift}x High-severity concentration`;
+    case "POTENTIAL_IMPACT": {
+      const total = profile.financials.potential_impact.total;
+      return total !== null ? `$${total.toLocaleString("en-US", { maximumFractionDigits: 0 })} potential impact` : primary.label;
+    }
+    case "NET_EXPOSURE_CONCENTRATION": {
+      const pct = profile.netExposureConcentration.top_share_pct;
+      return pct !== null ? `${pct}% of net exposure in its top ${profile.netExposureConcentration.top_n} events` : primary.label;
+    }
+    case "OPEN_WORKLOAD":
+      return `${profile.openWorkload.open_rate_pct}% of events still open`;
+    case "SLOW_DETECTION":
+      return `Detection delay averaging ${profile.timeliness.detection_delay.mean_days}d`;
+    case "SLOW_RECORDING":
+      return `Recording delay averaging ${profile.timeliness.recording_delay.mean_days}d`;
+    case "LONG_EVENT_JOURNEY":
+      return `Event journey averaging ${profile.timeliness.occurrence_to_record.mean_days}d`;
+    case "ORG_HIGH_RATE_VARIATION": {
+      const spread = organisationHighRateSpread(profile.organisationBreakdown);
+      return spread ? `${spread.spread_pct}-point High-rate spread across organisations` : primary.label;
+    }
+    default:
+      return primary.label;
+  }
 }
 
 /**
@@ -462,6 +645,8 @@ function rankProfiles(profiles: IssueProfile[]): IssueSummary[] {
       rank: index + 1,
       rankScore: profile.rankScore,
       triggeredSignals: profile.triggeredSignals,
+      counterSignals: profile.counterSignals,
+      whyItSurfaced: buildWhyItSurfaced(profile),
       headline: {
         event_count: profile.severity.event_count,
         high_rate_pct: profile.severity.high_rate_pct,
@@ -495,6 +680,7 @@ export function buildIssueEvidencePayload(profile: IssueProfile): IssueEvidenceP
   return {
     issue: profile.issue,
     triggered_signals: profile.triggeredSignals.map((s) => ({ id: s.id, label: s.label, detail: s.detail })),
+    counter_signals: profile.counterSignals.map((s) => ({ id: s.id, label: s.label, detail: s.detail })),
     severity: profile.severity,
     openWorkload: profile.openWorkload,
     financials: profile.financials,

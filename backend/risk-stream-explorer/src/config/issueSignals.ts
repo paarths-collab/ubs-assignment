@@ -1,4 +1,4 @@
-import type { SignalId } from "../types/Issue";
+import type { CounterSignalId, SignalId } from "../types/Issue";
 
 /**
  * The ONE place every threshold and weight for issue-intelligence ranking
@@ -44,6 +44,21 @@ export const ISSUE_SIGNAL_THRESHOLDS = {
   /** An issue x organisation High rate is flagged "small sample" (caveat required in the UI) when the slice has fewer than this many High-classified events — with per-org N around 17, a couple of High events swing the rate a great deal. */
   ORG_HIGH_RATE_SMALL_SAMPLE_MAX_HIGH_COUNT: 5,
 
+  /**
+   * Every issue spans exactly 4 organisations with a uniform ~25% volume
+   * share each (see the module comment) — that flatness is deliberately not
+   * a signal. What DOES vary is the High *rate* per organisation. Signal
+   * input: the spread (max - min) of per-org High rate within an issue, in
+   * percentage points. Observed spreads across the 15 issues: 0-17.65 points.
+   * There is a real gap in the distribution between 11.76 (5 issues) and
+   * 6.62 (the next-highest) — 10 sits in that gap and isolates the 9 issues
+   * with a genuine organisational split from the 6 where the org-level rate
+   * is essentially flat. Every org slice behind this signal rests on 0-3
+   * High events out of ~17, so its `detail` always carries a small-sample
+   * caveat — this is a directional signal, not a robust one.
+   */
+  ORG_HIGH_RATE_VARIATION_SPREAD_MIN_PCT: 10,
+
   /** How many top owners/assignees to surface as "workflow concentration" per issue. */
   WORKFLOW_CONCENTRATION_TOP_N: 5,
 
@@ -60,6 +75,22 @@ export const ISSUE_SIGNAL_THRESHOLDS = {
   /** A trend is only called "material" when |percent change| exceeds this AND the smaller window has enough events for the percentage to mean anything. With this windowing, observed per-issue swings top out around 13% — comfortably under this threshold, so no issue should manufacture a rising/falling narrative from this dataset. */
   TREND_MATERIAL_CHANGE_MIN_ABS_PCT: 25,
   TREND_MATERIAL_CHANGE_MIN_WINDOW_COUNT: 5,
+
+  /**
+   * Counter-signal margins: how close a timeliness/open-rate metric must sit
+   * to its enterprise baseline before it is honestly reported as "not
+   * unusual" rather than left unmentioned. Each margin is chosen to sit
+   * comfortably below the corresponding triggered-signal cutoff above so a
+   * metric can never be flagged as both elevated and near-baseline at once.
+   */
+  /** Detection delay: baseline 2.46d, observed per-issue range 1.94d-3.02d (deltas -0.52 to +0.56). The SLOW_DETECTION trigger fires at a 0.34d delta from baseline (2.8d); 0.3d stays under that with no overlap. */
+  DETECTION_NEAR_BASELINE_MAX_ABS_DELTA_DAYS: 0.3,
+  /** Recording delay: baseline 3.61d, observed per-issue range 3.28d-4.0d (deltas -0.33 to +0.39). The SLOW_RECORDING trigger fires at a 0.39d delta from baseline (4.0d); 0.35d stays under that with no overlap. */
+  RECORDING_NEAR_BASELINE_MAX_ABS_DELTA_DAYS: 0.35,
+  /** Occurrence-to-record ("event journey"): baseline 6.07d, observed per-issue range 5.40d-6.83d (deltas -0.67 to +0.76). The LONG_EVENT_JOURNEY trigger fires at a 0.23d delta from baseline (6.3d); 0.2d stays under that with no overlap. */
+  JOURNEY_NEAR_BASELINE_MAX_ABS_DELTA_DAYS: 0.2,
+  /** Open rate: baseline 72.1%, observed per-issue range 62.7%-80.6% (deltas -9.4 to +8.5 points). The OPEN_WORKLOAD trigger fires at a 5.9-point delta from baseline (78%); 4.0 points stays under that with no overlap. */
+  OPEN_RATE_NEAR_BASELINE_MAX_ABS_DELTA_PCT: 4.0,
 } as const;
 
 /**
@@ -79,6 +110,8 @@ export const SIGNAL_WEIGHTS: Record<SignalId, number> = {
   SLOW_DETECTION: 1,
   SLOW_RECORDING: 1,
   LONG_EVENT_JOURNEY: 1,
+  /** Weighted like the other secondary timeliness/workload signals — every org slice behind it is a small sample (see the threshold comment above), so it should never outweigh a signal built on the issue's full event count. */
+  ORG_HIGH_RATE_VARIATION: 1,
 };
 
 export const SIGNAL_LABELS: Record<SignalId, string> = {
@@ -90,4 +123,37 @@ export const SIGNAL_LABELS: Record<SignalId, string> = {
   SLOW_DETECTION: "Slow detection",
   SLOW_RECORDING: "Slow recording",
   LONG_EVENT_JOURNEY: "Long event journey",
+  ORG_HIGH_RATE_VARIATION: "Organisation High-rate variation",
 };
+
+export const COUNTER_SIGNAL_LABELS: Record<CounterSignalId, string> = {
+  DETECTION_NEAR_BASELINE: "Detection delay near baseline",
+  RECORDING_NEAR_BASELINE: "Recording delay near baseline",
+  JOURNEY_NEAR_BASELINE: "Event journey near baseline",
+  OPEN_RATE_NEAR_BASELINE: "Open rate near baseline",
+  NO_MATERIAL_TREND: "No material trend",
+  NO_STRONG_ROOT_CAUSE_INTERACTION: "No strong root-cause interaction",
+  SEVERITY_AT_OR_BELOW_BASELINE: "Severity at or below baseline",
+};
+
+/**
+ * Breaks ties when two or more triggered signals share the top weight (e.g.
+ * HIGH_SEVERITY_CONCENTRATION and STRONG_ROOT_CAUSE_INTERACTION both weigh
+ * 3): the earliest entry in this list among the tied signals becomes
+ * "primary". Root-cause interaction is ranked ahead of general severity
+ * concentration because it names a more specific mechanism (a particular
+ * root cause, not just "severity is elevated") — that specificity is what
+ * `whyItSurfaced` should lead the card with. Order beyond the tied weight
+ * classes doesn't matter since a strictly higher weight always wins first.
+ */
+export const SIGNAL_TIE_BREAK_PRIORITY: SignalId[] = [
+  "STRONG_ROOT_CAUSE_INTERACTION",
+  "HIGH_SEVERITY_CONCENTRATION",
+  "POTENTIAL_IMPACT",
+  "NET_EXPOSURE_CONCENTRATION",
+  "OPEN_WORKLOAD",
+  "SLOW_DETECTION",
+  "SLOW_RECORDING",
+  "LONG_EVENT_JOURNEY",
+  "ORG_HIGH_RATE_VARIATION",
+];
