@@ -177,6 +177,10 @@ export function renderLandingPage(repository: EventRepository, root: HTMLElement
             el("span", { className: "scope-strip__item" }, [el("strong", {}, [String(orgCount)]), " organisations"]),
             el("span", { className: "scope-strip__item" }, [`Financial (${financialCount}) + Non-Financial (${nonFinancialCount})`]),
           ]),
+          el("p", { className: "scope-note" }, [
+            el("strong", {}, ["Two timelines in the data. "]),
+            "Risk events occurred Sep 2024 – Aug 2026 — this occurrence period drives the risk stream. Record activity runs later: discovery and creation extend into Sep 2026, and record modification through Nov 2026 — used for workflow and aging analysis, not for when the risk actually occurred.",
+          ]),
         ]),
       ]),
 

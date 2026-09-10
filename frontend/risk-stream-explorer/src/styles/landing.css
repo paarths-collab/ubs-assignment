@@ -189,6 +189,19 @@
   font-weight: 600;
 }
 
+.scope-note {
+  margin: var(--space-3) 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 70ch;
+}
+
+.scope-note strong {
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
 /* ---- How to read this (assumptions + AI) ---- */
 .note-grid {
   display: grid;
