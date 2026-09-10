@@ -37,7 +37,7 @@ The frontend talks to the backend via `VITE_API_BASE_URL` (defaults to `http://l
 
 All four components call the backend for live AI analysis. The OpenRouter key lives only in the backend's `.env`; it is never sent to the browser or stored in `localStorage`. The backend recomputes the verified facts from the canonical datasets, sends only those facts to the configured model, validates structured responses where applicable, and falls back safely when the provider is unavailable.
 
-The default provider is OpenRouter with `deepseek/deepseek-v4-flash-0731`. Set `OPENROUTER_API_KEY` in `backend/risk-stream-explorer/.env` before starting the server. The model is billed by OpenRouter; it is not an OpenRouter free model.
+The default provider is OpenRouter with `deepseek/deepseek-v4-flash`. Set `OPENROUTER_API_KEY` in `backend/risk-stream-explorer/.env` before starting the server. The model is billed by OpenRouter; it is not an OpenRouter free model.
 
 ## Testing & typechecking
 
