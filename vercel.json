@@ -12,6 +12,9 @@
   "functions": {
     "api/[...path].ts": {
       "includeFiles": "backend/risk-executive-overview/data/**"
+    },
+    "api/ai/[...path].ts": {
+      "includeFiles": "backend/risk-executive-overview/data/**"
     }
   }
 }
