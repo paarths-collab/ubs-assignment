@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type { ActionRequest } from "../schemas/actions.schema";
+import type { ActionRequest } from "../schemas/actions.schema.js";
 
 export interface RecordedAction extends ActionRequest {
   actionId: string;

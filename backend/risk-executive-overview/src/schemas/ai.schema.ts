@@ -1,6 +1,6 @@
 import { z } from "zod";
-import { FilterInputSchema } from "./filters.schema";
-import { RiskDetailSelectionSchema } from "./risk-detail.schema";
+import { FilterInputSchema } from "./filters.schema.js";
+import { RiskDetailSelectionSchema } from "./risk-detail.schema.js";
 
 export const ManagerInsightRequestSchema = z.object({
   filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),

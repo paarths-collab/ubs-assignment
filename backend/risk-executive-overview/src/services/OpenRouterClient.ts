@@ -1,5 +1,5 @@
-import { env } from "../config/env";
-import { AppError } from "../utils/errors";
+import { env } from "../config/env.js";
+import { AppError } from "../utils/errors.js";
 
 /**
  * OpenRouter exposes an OpenAI-compatible Chat Completions API, so this

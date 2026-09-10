@@ -1,5 +1,5 @@
-import type { NormalizedFilters } from "../schemas/filters.schema";
-import type { BreakdownRow, ScenarioAnalytics } from "./Scenario";
+import type { NormalizedFilters } from "../schemas/filters.schema.js";
+import type { BreakdownRow, ScenarioAnalytics } from "./Scenario.js";
 
 /** Period-over-period movement, computed by splitting the filtered window in half. */
 export interface TrendFacts {

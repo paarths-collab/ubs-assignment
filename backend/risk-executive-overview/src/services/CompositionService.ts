@@ -1,9 +1,9 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { CompositionBlock, ExposureBlock } from "../types/Overview";
-import { buildBreakdown } from "./Breakdown";
-import { computeFinancialFacts } from "./FinancialFacts";
-import { countWhere, groupCounts, hasAnyValid, sumValid } from "../utils/aggregation";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { CompositionBlock, ExposureBlock } from "../types/Overview.js";
+import { buildBreakdown } from "./Breakdown.js";
+import { computeFinancialFacts } from "./FinancialFacts.js";
+import { countWhere, groupCounts, hasAnyValid, sumValid } from "../utils/aggregation.js";
 
 const CANCELLED_STATUS = "Cancelled";
 const CLOSED_STATUS = "Closed";

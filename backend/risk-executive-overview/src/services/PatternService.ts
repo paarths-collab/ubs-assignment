@@ -1,6 +1,6 @@
-import type { RiskPattern } from "../types/Pattern";
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskRepository } from "../repositories/RiskRepository";
+import type { RiskPattern } from "../types/Pattern.js";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
 
 export interface FilteredPattern {
   pattern: RiskPattern;

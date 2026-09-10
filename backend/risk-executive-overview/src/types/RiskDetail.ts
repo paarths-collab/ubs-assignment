@@ -1,6 +1,6 @@
-import type { FinancialFacts } from "../services/FinancialFacts";
-import type { RecurrenceFacts } from "../services/RecurrenceService";
-import type { DelayStats } from "../utils/statistics";
+import type { FinancialFacts } from "../services/FinancialFacts.js";
+import type { RecurrenceFacts } from "../services/RecurrenceService.js";
+import type { DelayStats } from "../utils/statistics.js";
 
 export type RiskDetailSelection =
   | { type: "pattern"; patternId: string }

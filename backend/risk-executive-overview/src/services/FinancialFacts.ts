@@ -1,5 +1,5 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import { hasAnyValid, sumValid } from "../utils/aggregation";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import { hasAnyValid, sumValid } from "../utils/aggregation.js";
 
 export interface FinancialFacts {
   grossAmountUsd: number | null;

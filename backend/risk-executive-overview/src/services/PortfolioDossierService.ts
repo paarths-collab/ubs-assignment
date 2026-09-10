@@ -1,14 +1,14 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { NormalizedFilters } from "../schemas/filters.schema";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import type { KpiSet } from "../types/Kpi";
-import type { KpiDeltas } from "./KpiService";
-import type { CompositionBlock, ExposureBlock } from "../types/Overview";
-import type { AttentionCard } from "./ScenarioService";
-import { calculateKPIs, computeKpiDeltas } from "./KpiService";
-import { buildComposition, buildExposureSummary } from "./CompositionService";
-import { buildScenarioSignals, rankScenarioSignals, buildAttentionCards } from "./ScenarioService";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { NormalizedFilters } from "../schemas/filters.schema.js";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import type { KpiSet } from "../types/Kpi.js";
+import type { KpiDeltas } from "./KpiService.js";
+import type { CompositionBlock, ExposureBlock } from "../types/Overview.js";
+import type { AttentionCard } from "./ScenarioService.js";
+import { calculateKPIs, computeKpiDeltas } from "./KpiService.js";
+import { buildComposition, buildExposureSummary } from "./CompositionService.js";
+import { buildScenarioSignals, rankScenarioSignals, buildAttentionCards } from "./ScenarioService.js";
 
 export interface PortfolioScenarioSummary {
   title: string;

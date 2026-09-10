@@ -1,4 +1,4 @@
-import { streamCompletion } from "./LlmService";
+import { streamCompletion } from "./LlmService.js";
 
 /**
  * Shared behavioural contract for every analysis call. The specialist prompt

@@ -1,13 +1,13 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { RiskDetailResponse, RiskDetailSelection, IssueSummary } from "../types/RiskDetail";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import { resolveFilteredPattern } from "./PatternService";
-import { computeFinancialFacts } from "./FinancialFacts";
-import { computeRecurrenceFacts } from "./RecurrenceService";
-import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation";
-import { computeDelayStats } from "../utils/statistics";
-import { AppError } from "../utils/errors";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { RiskDetailResponse, RiskDetailSelection, IssueSummary } from "../types/RiskDetail.js";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import { resolveFilteredPattern } from "./PatternService.js";
+import { computeFinancialFacts } from "./FinancialFacts.js";
+import { computeRecurrenceFacts } from "./RecurrenceService.js";
+import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation.js";
+import { computeDelayStats } from "../utils/statistics.js";
+import { AppError } from "../utils/errors.js";
 
 function resolveKpiSlice(kpiId: string, filteredEvents: RiskEvent[]): RiskEvent[] {
   switch (kpiId) {

@@ -1,6 +1,6 @@
-import type { NormalizedFilters } from "../schemas/filters.schema";
-import type { RecurrenceFacts } from "../services/RecurrenceService";
-import type { DelayStats } from "../utils/statistics";
+import type { NormalizedFilters } from "../schemas/filters.schema.js";
+import type { RecurrenceFacts } from "../services/RecurrenceService.js";
+import type { DelayStats } from "../utils/statistics.js";
 
 /**
  * The complete verified fact package handed to the LLM. Field names mirror

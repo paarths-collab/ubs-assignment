@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { FilterInputSchema } from "./filters.schema";
+import { FilterInputSchema } from "./filters.schema.js";
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "must be an ISO date (YYYY-MM-DD)");
 

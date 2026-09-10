@@ -1,7 +1,7 @@
-import { EXPECTED_TOTAL_EVENTS } from "../config/constants";
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { RiskPattern } from "../types/Pattern";
+import { EXPECTED_TOTAL_EVENTS } from "../config/constants.js";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { RiskPattern } from "../types/Pattern.js";
 
 const REQUIRED_STRING_FIELDS: Array<keyof RiskEvent> = [
   "eventId",

@@ -1,8 +1,8 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { KpiSet, KpiValue, Distributions } from "../types/Kpi";
-import type { NormalizedFilters } from "../schemas/filters.schema";
-import { countWhere, groupCounts, hasAnyValid, sumValid } from "../utils/aggregation";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { KpiSet, KpiValue, Distributions } from "../types/Kpi.js";
+import type { NormalizedFilters } from "../schemas/filters.schema.js";
+import { countWhere, groupCounts, hasAnyValid, sumValid } from "../utils/aggregation.js";
 
 const events = (value: number): KpiValue => ({ value, applicable: true, unit: "events" });
 const usd = (value: number): KpiValue => ({ value, applicable: true, unit: "USD" });

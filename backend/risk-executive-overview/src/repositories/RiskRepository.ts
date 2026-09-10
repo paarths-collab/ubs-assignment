@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
-import { DATA_PATHS } from "../config/constants";
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { RiskPattern, RiskPatternsFile } from "../types/Pattern";
-import type { RiskAiConfig } from "../types/AiConfig";
-import { validateDataset } from "../validation/validateDataset";
+import { DATA_PATHS } from "../config/constants.js";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { RiskPattern, RiskPatternsFile } from "../types/Pattern.js";
+import type { RiskAiConfig } from "../types/AiConfig.js";
+import { validateDataset } from "../validation/validateDataset.js";
 
 function readJson<T>(path: string): T {
   return JSON.parse(readFileSync(path, "utf-8")) as T;

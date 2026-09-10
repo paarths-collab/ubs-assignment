@@ -1,9 +1,9 @@
 import type { FastifyInstance } from "fastify";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import { OverviewRequestSchema } from "../schemas/filters.schema";
-import { normalizeFilters, filterEvents } from "../services/FilterService";
-import { calculateKPIs, calculateDistributions, computeKpiDeltas } from "../services/KpiService";
-import { buildComposition, buildExposureSummary } from "../services/CompositionService";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import { OverviewRequestSchema } from "../schemas/filters.schema.js";
+import { normalizeFilters, filterEvents } from "../services/FilterService.js";
+import { calculateKPIs, calculateDistributions, computeKpiDeltas } from "../services/KpiService.js";
+import { buildComposition, buildExposureSummary } from "../services/CompositionService.js";
 
 export function registerOverviewRoute(app: FastifyInstance, repository: RiskRepository): void {
   app.post("/api/overview", async (request) => {

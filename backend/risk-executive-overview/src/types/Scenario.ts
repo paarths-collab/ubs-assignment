@@ -1,7 +1,7 @@
-import type { RecurrenceFacts } from "../services/RecurrenceService";
-import type { DelayStats } from "../utils/statistics";
-import type { ReasonCode } from "./Priority";
-import type { TrendFacts } from "./Dossier";
+import type { RecurrenceFacts } from "../services/RecurrenceService.js";
+import type { DelayStats } from "../utils/statistics.js";
+import type { ReasonCode } from "./Priority.js";
+import type { TrendFacts } from "./Dossier.js";
 
 export type SignalLevel = "normal" | "elevated" | "critical";
 
