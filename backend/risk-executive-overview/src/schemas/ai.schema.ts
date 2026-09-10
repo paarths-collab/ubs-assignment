@@ -3,18 +3,18 @@ import { FilterInputSchema } from "./filters.schema";
 import { RiskDetailSelectionSchema } from "./risk-detail.schema";
 
 export const ManagerInsightRequestSchema = z.object({
-  filters: FilterInputSchema.default({}),
+  filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),
   selection: RiskDetailSelectionSchema,
 });
 
 /** The persistent, context-aware panel: no selection, just whatever the manager's filters currently show. */
 export const PortfolioAnalysisRequestSchema = z.object({
-  filters: FilterInputSchema.default({}),
+  filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),
   lens: z.enum(["analyse", "unusual", "investigate"]),
 });
 
 export const FollowUpRequestSchema = z.object({
-  filters: FilterInputSchema.default({}),
+  filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),
   context: z.enum(["kpi", "ai-analysis", "attention", "composition", "exposure", "organisations", "issues", "risk-brief"]),
   question: z.string().trim().min(1).max(1000),
   selection: RiskDetailSelectionSchema.optional(),

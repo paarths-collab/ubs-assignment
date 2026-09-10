@@ -1,6 +1,4 @@
 import {
-  applyFilters,
-  findSimilarEvents,
   renderEventDetailSections,
   shortOrganisationName,
   type EventInsightIntent,
@@ -9,8 +7,9 @@ import {
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { renderAIPanel } from "./AIInsightPanel";
-import { buildEventMessages } from "../services/promptBuilder";
+import { analyseEvent } from "../services/LLMClient";
 import { eventTypeBadge, severityBadge } from "./badges";
+import { followUpComposer } from "./FollowUpComposer";
 
 const EVENT_AI_ACTIONS: { intent: EventInsightIntent; label: string }[] = [
   { intent: "summarise_event", label: "Summarise event" },
@@ -101,12 +100,15 @@ export function renderEventDrawer(ctx: AppContext, container: HTMLElement): void
       const sectionEl = el("div", { className: "detail-section", "data-open": String(i === 0) });
       const bodyEl = el("div", { className: "detail-section__body" }, [
         ...section.fields.map((f) =>
-          el("div", { className: "detail-field" }, [
+          el("div", { className: `detail-field${f.format === "longtext" ? " detail-field--long" : ""}` }, [
             el("div", { className: "detail-field__label" }, [f.label]),
             fieldValue(f),
           ]),
         ),
       ]);
+      bodyEl.append(followUpComposer(section.title, (question, focusSection) =>
+        analyseEvent("summarise_event", event.eventId, state.filters, question, focusSection),
+      ));
       bodyEl.style.display = i === 0 ? "grid" : "none";
 
       const header = el(
@@ -130,21 +132,12 @@ export function renderEventDrawer(ctx: AppContext, container: HTMLElement): void
     });
 
     const aiHost = el("div", { className: "ai-panel" });
-    const scopedEvents = applyFilters(ctx.repository.getAll(), state.filters);
-    const themeShareInDataset =
-      scopedEvents.length > 0
-        ? scopedEvents.filter((e) => e.riskTheme === event.riskTheme).length / scopedEvents.length
-        : null;
-    const rootCauseShareInDataset =
-      scopedEvents.length > 0
-        ? scopedEvents.filter((e) => e.rootCause === event.rootCause).length / scopedEvents.length
-        : null;
-    const similarEvents = findSimilarEvents(event, ctx.repository.getAll());
+    // Only the event id and active filters go to the server; similar events,
+    // theme/root-cause shares and every other figure are recomputed there.
     renderAIPanel(
       aiHost,
       EVENT_AI_ACTIONS,
-      (intent) =>
-        buildEventMessages(intent, event, detail, similarEvents, themeShareInDataset, rootCauseShareInDataset),
+      (intent, question, focusSection) => analyseEvent(intent, event.eventId, state.filters, question, focusSection),
       "AI Risk Analyst — Event",
     );
     aiCol.append(aiHost);

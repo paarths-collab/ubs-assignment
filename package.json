@@ -12,6 +12,7 @@
     "test": "vitest run --passWithNoTests",
     "test:watch": "vitest",
     "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
+    "dev:server": "npm run dev --workspace=backend/risk-stream-explorer",
     "build": "npm run build --workspace=frontend/risk-stream-explorer && node -e \"require('fs').renameSync('dist/index.html','dist/risk-stream-explorer.html')\"",
     "dev:api": "npm run dev --workspace=backend/risk-executive-overview",
     "dev:overview": "npm run dev --workspace=frontend/risk-executive-overview",

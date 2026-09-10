@@ -6,7 +6,7 @@ import type {
   SimilarEventMatch,
   StreamEvent,
   TrendFact,
-} from "@backend/index";
+} from "../index";
 import {
   formatDays,
   formatMoney,
@@ -14,21 +14,24 @@ import {
   formatPercentagePoints,
   formatSignedPercent,
   shortOrganisationName,
-} from "@backend/index";
-import type { ChatMessage } from "./LLMClient";
+} from "../index";
+export interface ChatMessage {
+  role: "system" | "user" | "assistant";
+  content: string;
+}
 
 const SYSTEM_PROMPT = `You are an AI Risk Analyst embedded in an operational risk timeline tool for a Senior Risk Manager at a financial institution.
 
 You will be given a block of VERIFIED DATA that was computed deterministically from the underlying event dataset — every number in it is already correct and audited. You are not allowed to invent, estimate, or restate any number that is not present in that data block. If the data provided is insufficient to answer the question, say exactly: "The available verified data does not support that conclusion." — do not guess.
 
-Structure your answer with these labeled sections, using only the ones that are relevant to the question asked (omit a section entirely if it has nothing to say — do not write "N/A"):
+Structure every answer with all five labeled sections below, even when one section must explain that the evidence is limited:
 Observed:
 Why it matters:
 Drivers:
 Investigate:
 Control considerations:
 
-Keep it concise and executive-facing. Use plain text (no markdown tables). Bullet points for lists are fine using "- ".`;
+Be concise but substantive: give an evidence-led answer of 300–500 words when the supplied facts support it. Include 2–4 concrete investigation bullets and 2–3 concrete control bullets. Do not pad the answer or repeat the same metric. For period questions, compare the selected period with the previous comparable period only when a prior baseline exists. If the data says "no prior baseline", "no comparable baseline", or "direction=new", explicitly say that period-over-period change cannot be quantified; analyse the current profile and day-by-day event sequence instead. For event questions, explain the event's significance, timeliness, and next investigative steps using the event detail and verified context. Keep causal language explicitly cautious: use "may indicate", "is consistent with", or "warrants investigation". Narrative detail fields are qualitative context only: never repeat or calculate a number from Background, Root cause detail, Impact detail, Opportunity, or Issue detail unless that same number is separately present in the verified metric lines. If a requested conclusion is not supported, say exactly: "The available verified data does not support that conclusion." Use plain text headings exactly as shown (no bold Markdown around headings). Bullet points for lists are fine using "- ".`;
 
 const PERIOD_QUESTIONS: Record<PeriodInsightIntent, string> = {
   explain_period: "Explain this period as a whole: what happened, and why it matters.",
@@ -61,6 +64,7 @@ export function buildPeriodMessages(
   scopeDescription: string,
   comparison: PeriodComparison,
   rankedTrendFacts: TrendFact[],
+  daySummaries: string[],
 ): ChatMessage[] {
   const c = comparison.current;
   const p = comparison.previous;
@@ -69,6 +73,7 @@ export function buildPeriodMessages(
     `VERIFIED DATA — ${scopeDescription}, period "${c.label}" (${c.startDate} to ${c.endDate})`,
     "",
     `Event count: ${c.eventCount} (previous period: ${p?.eventCount ?? "no prior baseline"}, change: ${comparison.eventCountDelta.isNew ? "new, no comparable baseline" : formatSignedPercent(comparison.eventCountDelta.percentChange)})`,
+    `Baseline status: ${p === null ? "no prior comparable period exists; do not quantify period-over-period change" : "prior comparable period available"}`,
     `Severity: High=${c.severityCounts.High} (${formatPercent(c.severityShares.High)}), Moderate=${c.severityCounts.Moderate} (${formatPercent(c.severityShares.Moderate)}), Low=${c.severityCounts.Low} (${formatPercent(c.severityShares.Low)})`,
     `High severity share change vs previous: ${formatPercentagePoints(comparison.severityShareDeltas.High.deltaPercentagePoints)}`,
     `Event type: Financial=${c.eventTypeCounts.Financial} (${formatPercent(c.eventTypeShares.Financial)}), Non-Financial=${c.eventTypeCounts["Non-Financial"]} (${formatPercent(c.eventTypeShares["Non-Financial"])})`,
@@ -91,6 +96,9 @@ export function buildPeriodMessages(
     "",
     "Ranked trend facts (largest movement first, vs previous comparable period):",
     ...rankedTrendFacts.map(trendFactLine),
+    "",
+    "Day-by-day events (verified occurrence-date sequence):",
+    ...(daySummaries.length > 0 ? daySummaries.map((summary) => `- ${summary}`) : ["- No events matched this period."]),
   ];
 
   return [
@@ -107,6 +115,9 @@ export function buildEventMessages(
   themeShareInDataset: number | null,
   rootCauseShareInDataset: number | null,
 ): ChatMessage[] {
+  const qualitativeDetail = (value: string | null | undefined): string =>
+    (value ?? "not available").replace(/\$?\d[\d,]*(?:\.\d+)?%?/g, "[numeric detail omitted]");
+
   const lines: string[] = [
     `VERIFIED DATA — Event ${event.eventId}`,
     "",
@@ -134,10 +145,10 @@ export function buildEventMessages(
   if (detail) {
     lines.push(
       "",
-      `Background: ${detail["Background Detail"] ?? "not available"}`,
-      `Root cause detail: ${detail["Root Cause Detail"] ?? "not available"}`,
-      `Impact detail: ${detail["Impact Detail"] ?? "not available"}`,
-      `Opportunity: ${detail["Opportunity"] ?? "not available"}`,
+      `Background: ${qualitativeDetail(detail["Background Detail"])}`,
+      `Root cause detail: ${qualitativeDetail(detail["Root Cause Detail"])}`,
+      `Impact detail: ${qualitativeDetail(detail["Impact Detail"])}`,
+      `Opportunity: ${qualitativeDetail(detail["Opportunity"])}`,
     );
   }
 
