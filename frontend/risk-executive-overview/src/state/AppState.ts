@@ -4,6 +4,7 @@ import type {
   Metadata,
   OverviewResponse,
   PriorityResponse,
+  RiskDetailResponse,
 } from "../types";
 
 export interface AppState {
@@ -17,6 +18,11 @@ export interface AppState {
 
   /** Drives the inline "Selected Risk Brief" section; null shows its empty prompt. */
   selectedScenarioId: string | null;
+
+  /** KPI click-through: the events behind a headline figure. */
+  selectedKpiId: string | null;
+  kpiDetail: RiskDetailResponse | null;
+  loadingKpiDetail: boolean;
 
   aiInsight: ManagerInsightApiResponse | null;
   loadingAi: boolean;
@@ -43,6 +49,10 @@ export function createInitialState(): AppState {
     loadError: null,
 
     selectedScenarioId: null,
+
+    selectedKpiId: null,
+    kpiDetail: null,
+    loadingKpiDetail: false,
 
     aiInsight: null,
     loadingAi: false,

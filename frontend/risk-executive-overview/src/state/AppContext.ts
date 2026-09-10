@@ -70,11 +70,32 @@ export class AppContext {
         priority,
         loading: false,
         selectedScenarioId: stillPresent ? selectedScenarioId : fallbackId,
+        selectedKpiId: null,
+        kpiDetail: null,
         aiInsight: stillPresent ? this.getState().aiInsight : null,
         actionFeedback: null,
       });
     } catch (err) {
       this.store.setState({ loading: false, loadError: describeError(err) });
+    }
+  }
+
+  /** Opens (or closes) the drill-down behind a KPI headline figure. */
+  async selectKpi(kpiId: string): Promise<void> {
+    if (this.getState().selectedKpiId === kpiId) {
+      this.store.setState({ selectedKpiId: null, kpiDetail: null });
+      return;
+    }
+
+    this.store.setState({ selectedKpiId: kpiId, kpiDetail: null, loadingKpiDetail: true });
+    try {
+      const { detail } = await api.postRiskDetail(this.getState().filters, { type: "kpi", kpiId });
+      // A slower earlier request must not overwrite a newer selection.
+      if (this.getState().selectedKpiId !== kpiId) return;
+      this.store.setState({ kpiDetail: detail, loadingKpiDetail: false });
+    } catch {
+      if (this.getState().selectedKpiId !== kpiId) return;
+      this.store.setState({ kpiDetail: null, loadingKpiDetail: false, selectedKpiId: null });
     }
   }
 

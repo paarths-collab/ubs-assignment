@@ -50,6 +50,53 @@ const KPI_DEFS: Array<{ key: keyof OverviewResponse["kpis"]; label: string; acce
   { key: "remediationHours", label: "Remediation Effort" },
 ];
 
+/** The events behind a headline figure, shown inline rather than in a modal. */
+function renderKpiDetail(ctx: AppContext): HTMLElement | null {
+  const { selectedKpiId, kpiDetail, loadingKpiDetail } = ctx.getState();
+  if (!selectedKpiId) return null;
+
+  const label = KPI_DEFS.find((def) => def.key === selectedKpiId)?.label ?? selectedKpiId;
+
+  if (loadingKpiDetail || !kpiDetail) {
+    return el("div", { className: "kpi-detail" }, [
+      el("div", { className: "kpi-detail__title" }, [`${label} — loading events…`]),
+    ]);
+  }
+
+  const { summary, severity, ownership, workflow, evidence } = kpiDetail;
+  const stat = (labelText: string, value: string): HTMLElement =>
+    el("div", { className: "kpi-detail__stat" }, [
+      el("span", { className: "kpi-detail__stat-label" }, [labelText]),
+      el("span", { className: "kpi-detail__stat-value" }, [value]),
+    ]);
+
+  return el("div", { className: "kpi-detail" }, [
+    el("div", { className: "kpi-detail__head" }, [
+      el("span", { className: "kpi-detail__title" }, [`${label} — ${summary.eventCount} events behind this figure`]),
+      el(
+        "button",
+        { type: "button", className: "kpi-detail__close", onclick: () => void ctx.selectKpi(selectedKpiId) },
+        ["Close"],
+      ),
+    ]),
+    el("div", { className: "kpi-detail__stats" }, [
+      stat("High", String(severity.High ?? 0)),
+      stat("Moderate", String(severity.Moderate ?? 0)),
+      stat("Low", String(severity.Low ?? 0)),
+      stat("Open", String(workflow.openEventCount)),
+      stat("Closed", String(workflow.closedEventCount)),
+      stat("Organisations", String(ownership.organisationCount)),
+      stat("Owners", String(ownership.ownerCount)),
+      stat("Event IDs", String(evidence.eventIds.length)),
+    ]),
+    el(
+      "div",
+      { className: "evidence-ids" },
+      evidence.eventIds.slice(0, 40).map((id) => el("span", {}, [id])),
+    ),
+  ]);
+}
+
 export function renderKpiGrid(ctx: AppContext, host: HTMLElement): void {
   function sync(): void {
     const { overview, loading } = ctx.getState();
@@ -61,21 +108,38 @@ export function renderKpiGrid(ctx: AppContext, host: HTMLElement): void {
       return;
     }
 
+    const { selectedKpiId } = ctx.getState();
+
     const cards = KPI_DEFS.map((def) => {
       const kpi = overview.kpis[def.key];
       const isEmpty = !kpi.applicable || kpi.value == null;
-      return el("div", { className: `metric-card${def.accent ? ` metric-card--${def.accent}` : ""}` }, [
-        el("div", { className: "metric-card__label" }, [def.label]),
-        el("div", { className: `metric-card__value${isEmpty ? " is-empty" : ""}` }, [
-          isEmpty ? "Not applicable" : formatKpi(kpi),
-        ]),
-        el("div", { className: "metric-card__sub" }, [
-          isEmpty ? "structurally not applicable to this selection" : supportingLine(def.key, overview),
-        ]),
-      ]);
+      const isSelected = selectedKpiId === def.key;
+
+      return el(
+        "button",
+        {
+          type: "button",
+          className: `metric-card${def.accent ? ` metric-card--${def.accent}` : ""}${isSelected ? " is-selected" : ""}`,
+          "data-clickable": "true",
+          "aria-pressed": String(isSelected),
+          onclick: () => void ctx.selectKpi(def.key),
+        },
+        [
+          el("div", { className: "metric-card__label" }, [def.label]),
+          el("div", { className: `metric-card__value${isEmpty ? " is-empty" : ""}` }, [
+            isEmpty ? "Not applicable" : formatKpi(kpi),
+          ]),
+          el("div", { className: "metric-card__sub" }, [
+            isEmpty ? "structurally not applicable to this selection" : supportingLine(def.key, overview),
+          ]),
+        ],
+      );
     });
 
-    host.replaceChildren(el("div", { className: "metric-grid" }, cards));
+    const detail = renderKpiDetail(ctx);
+    const children: HTMLElement[] = [el("div", { className: "metric-grid" }, cards)];
+    if (detail) children.push(detail);
+    host.replaceChildren(...children);
   }
 
   ctx.subscribe(sync);
