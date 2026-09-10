@@ -93,14 +93,18 @@ export class GroqInvalidJsonError extends Error {
   }
 }
 
-/** True for errors worth one bounded retry: network failure, 429, or 5xx. Never for 400s or local parse/schema errors. */
+/**
+ * True for errors worth one bounded retry: transient network failure, 429,
+ * or 5xx. A hard timeout is deliberately not retried — doing so doubles the
+ * analyst's wait before the deterministic fallback can render.
+ */
 export function isRetryableGroqError(err: unknown): boolean {
   const status = (err as { status?: unknown } | null)?.status;
   if (typeof status === "number") {
     return status === 429 || status >= 500;
   }
   const name = (err as { name?: unknown } | null)?.name;
-  if (name === "APIConnectionError" || name === "APIConnectionTimeoutError" || name === "AbortError") {
+  if (name === "APIConnectionError" || name === "APIConnectionTimeoutError") {
     return true;
   }
   const code = (err as { code?: unknown } | null)?.code;
@@ -212,6 +216,7 @@ export class GroqService {
       {
         model: this.model,
         temperature: 0.2,
+        max_tokens: 1600,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: JSON.stringify(payload) },

@@ -160,6 +160,19 @@ export function createChatCompletionsClient(config: LlmConfig): ChatCompletionsC
           const timer =
             timeout === undefined ? null : setTimeout(() => controller.abort(), timeout);
           try {
+            // OpenRouter models can default to expensive/high reasoning and
+            // price-first provider selection. This application needs a short,
+            // structured analyst response, so prefer the lowest-latency host
+            // and explicitly keep reasoning bounded. Callers may still
+            // override either setting by supplying their own values.
+            const requestParams =
+              config.provider === "openrouter"
+                ? {
+                    provider: { sort: "latency" },
+                    reasoning: { effort: "low", exclude: true },
+                    ...params,
+                  }
+                : params;
             const response = await fetch(url, {
               method: "POST",
               headers: {
@@ -167,7 +180,7 @@ export function createChatCompletionsClient(config: LlmConfig): ChatCompletionsC
                 Authorization: `Bearer ${config.apiKey}`,
                 ...providerHeaders(config),
               },
-              body: JSON.stringify(params),
+              body: JSON.stringify(requestParams),
               signal: options?.signal ?? controller.signal,
             });
 
