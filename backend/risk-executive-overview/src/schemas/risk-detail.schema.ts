@@ -12,7 +12,7 @@ export const RiskDetailSelectionSchema = z.discriminatedUnion("type", [
 ]);
 
 export const RiskDetailRequestSchema = z.object({
-  filters: FilterInputSchema.default({}),
+  filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),
   selection: RiskDetailSelectionSchema,
 });
 

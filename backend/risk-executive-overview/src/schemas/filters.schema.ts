@@ -28,10 +28,10 @@ export interface NormalizedFilters {
 }
 
 export const OverviewRequestSchema = z.object({
-  filters: FilterInputSchema.default({}),
+  filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),
 });
 
 export const PrioritySignalsRequestSchema = z.object({
-  filters: FilterInputSchema.default({}),
+  filters: FilterInputSchema.default({ organisation: "Enterprise-wide", eventType: "All", severity: "All" }),
   limit: z.number().int().positive().max(50).default(15),
 });
