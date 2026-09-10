@@ -207,16 +207,26 @@ export interface GroqIssueStructuredResult {
   limitations: string;
 }
 
+/**
+ * `provider`/`model` are returned so the UI can name the model that actually
+ * produced the text instead of hard-coding one. The provider is configurable
+ * (see src/config/llm.ts), so a hard-coded label silently becomes a false
+ * attribution the moment it is changed.
+ */
 export type AiIssueResponse =
   | {
       status: "ok";
       matchingEventIds: string[];
       ai: GroqIssueStructuredResult;
       cached: boolean;
+      provider: string;
+      model: string;
     }
   | {
       status: "fallback";
       matchingEventIds: string[];
       ai: null;
       message: string;
+      provider: string;
+      model: string;
     };

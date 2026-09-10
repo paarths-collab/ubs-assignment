@@ -31,6 +31,7 @@ export interface ObservedFacts {
 }
 
 /** Response body of `POST /api/ai/pattern/:patternId`. */
+/** `provider`/`model` name the model that actually produced the text — see AiIssueResponse. */
 export type AiPatternResponse =
   | {
       status: "ok";
@@ -38,6 +39,8 @@ export type AiPatternResponse =
       matchingEventIds: string[];
       ai: GroqStructuredResult;
       cached: boolean;
+      provider: string;
+      model: string;
     }
   | {
       status: "fallback";
@@ -45,4 +48,6 @@ export type AiPatternResponse =
       matchingEventIds: string[];
       ai: null;
       message: string;
+      provider: string;
+      model: string;
     };

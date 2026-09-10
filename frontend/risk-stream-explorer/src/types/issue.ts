@@ -179,12 +179,16 @@ export interface GroqIssueStructuredResult {
 export type AiIssueResponse =
   | {
       status: "ok";
+      provider: string;
+      model: string;
       matchingEventIds: string[];
       ai: GroqIssueStructuredResult;
       cached: boolean;
     }
   | {
       status: "fallback";
+      provider: string;
+      model: string;
       matchingEventIds: string[];
       ai: null;
       message: string;

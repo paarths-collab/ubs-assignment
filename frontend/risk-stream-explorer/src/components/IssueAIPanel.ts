@@ -2,18 +2,30 @@ import { fetchIssueAiAnalysis, ApiError } from "../services/PatternApiClient";
 import type { AiIssueResponse } from "../types/issue";
 import { el } from "./dom";
 
-function aiBlock(label: string, content: HTMLElement): HTMLElement {
+/**
+ * The attribution names the model the server actually used, from the API
+ * response — the provider is configurable, so a hard-coded "Groq" would
+ * become a false attribution the moment it is switched.
+ */
+function aiBlock(label: string, content: HTMLElement, sourceLabel: string): HTMLElement {
   return el("div", {}, [
-    el("div", { className: "ai-answer__block-label" }, [label, el("span", { className: "ai-source-tag" }, ["— Groq"])]),
+    el("div", { className: "ai-answer__block-label" }, [label, el("span", { className: "ai-source-tag" }, [`— ${sourceLabel}`])]),
     content,
   ]);
 }
 
+/** "deepseek/deepseek-v4-flash-0731" -> "deepseek-v4-flash-0731" for display. */
+function shortModelName(model: string): string {
+  const slash = model.lastIndexOf("/");
+  return slash === -1 ? model : model.slice(slash + 1);
+}
+
 function renderSuccess(container: HTMLElement, response: AiIssueResponse & { status: "ok" }, onOpenEvent: (eventId: string) => void): void {
   container.innerHTML = "";
+  const source = shortModelName(response.model);
   const answer = el("div", { className: "ai-answer" }, [
-    aiBlock("Interpretation", el("div", { className: "ai-answer__text" }, [response.ai.interpretation])),
-    aiBlock("Why it may matter", el("div", { className: "ai-answer__text" }, [response.ai.whyItMayMatter])),
+    aiBlock("Interpretation", el("div", { className: "ai-answer__text" }, [response.ai.interpretation]), source),
+    aiBlock("Why it may matter", el("div", { className: "ai-answer__text" }, [response.ai.whyItMayMatter]), source),
     aiBlock(
       "Investigate",
       el(
@@ -21,9 +33,10 @@ function renderSuccess(container: HTMLElement, response: AiIssueResponse & { sta
         { className: "ai-answer__list" },
         response.ai.investigationQuestions.map((q) => el("li", {}, [q])),
       ),
+      source,
     ),
-    aiBlock("Suggested control", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl])),
-    aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations])),
+    aiBlock("Suggested control", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl]), source),
+    aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations]), source),
     el("div", { className: "panel-subsection" }, [
       el("div", { className: "panel-subsection__title" }, ["Evidence — verified Event IDs only"]),
       el(
@@ -60,13 +73,14 @@ function renderError(container: HTMLElement, message: string, onRetry: () => voi
  * requests nothing until `run()` is called from the small control in the
  * analysis panel's corner: the deterministic analysis is the product and is
  * complete without this, so interpretation stays opt-in and out of the way
- * rather than occupying a column and spending a Groq request per issue click.
+ * rather than occupying a column and spending a request per issue click.
  *
- * Calls POST /api/ai/issue/:issueSlug, which never calls Groq from the
- * browser and never trusts Groq for numbers/IDs — only the five prose fields
- * below are Groq-sourced, clearly labelled as such. The model is explicitly
- * instructed to challenge the evidence, not just support it — "Why it may
- * matter" and "Limitations" are where that shows up.
+ * Calls POST /api/ai/issue/:issueSlug. The provider is chosen server-side and
+ * its key never reaches the browser; the model is never trusted for numbers
+ * or IDs — only the five prose fields below come from it, each labelled with
+ * the model that produced them. It is explicitly instructed to challenge the
+ * evidence, not just support it — "Why it may matter" and "Limitations" are
+ * where that shows up.
  */
 export function renderIssueAIPanel(
   container: HTMLElement,
@@ -74,11 +88,14 @@ export function renderIssueAIPanel(
   onOpenEvent: (eventId: string) => void,
 ): { run: () => void } {
   container.innerHTML = "";
+  // Which model answers is server-side configuration, so the badge starts
+  // generic and is replaced with the real provider once a response names it.
+  const providerBadge = el("span", { className: "ai-panel__live-badge", style: "position:static" }, ["LLM"]);
   container.append(
     el("div", { className: "panel__header" }, [
       el("span", { className: "panel__title" }, ["AI Analyst Assistant"]),
       el("div", { className: "panel__header-actions" }, [
-        el("span", { className: "ai-panel__live-badge", style: "position:static" }, ["GROQ"]),
+        providerBadge,
         el(
           "button",
           {
@@ -101,10 +118,12 @@ export function renderIssueAIPanel(
 
   function load(): void {
     body.innerHTML = "";
-    body.append(el("div", { className: "ai-loading" }, ["Asking Groq (openai/gpt-oss-120b) to interpret this issue's evidence…"]));
+    body.append(el("div", { className: "ai-loading" }, ["Asking the configured model to interpret this issue's evidence…"]));
 
     fetchIssueAiAnalysis(issueSlug)
       .then((response) => {
+        providerBadge.textContent = response.provider.toUpperCase();
+        providerBadge.title = `Model: ${response.model}`;
         if (response.status === "ok") {
           renderSuccess(body, response, onOpenEvent);
         } else {

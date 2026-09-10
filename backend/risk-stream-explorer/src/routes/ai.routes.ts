@@ -94,10 +94,12 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
               matchingEventIds,
               ai: outcome.result,
               cached: false,
+              provider: deps.env.llm.provider,
+              model: deps.env.llm.model,
             };
             deps.aiCache.set(cacheKey, response);
             request.log.info(
-              { patternId, attempt, latencyMs, model: deps.env.GROQ_MODEL, promptVersion: PROMPT_VERSION, cacheHit: false, success: true },
+              { patternId, attempt, latencyMs, model: deps.env.llm.model, promptVersion: PROMPT_VERSION, cacheHit: false, success: true },
               "ai.pattern",
             );
             return response;
@@ -111,7 +113,7 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
         }
       }
 
-      request.log.info({ patternId, model: deps.env.GROQ_MODEL, promptVersion: PROMPT_VERSION, success: false, reason: lastFailureReason }, "ai.pattern");
+      request.log.info({ patternId, model: deps.env.llm.model, promptVersion: PROMPT_VERSION, success: false, reason: lastFailureReason }, "ai.pattern");
 
       const fallback: AiPatternResponse = {
         status: "fallback",
@@ -119,6 +121,8 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
         matchingEventIds,
         ai: null,
         message: "AI interpretation is temporarily unavailable. Verified pattern evidence remains available.",
+        provider: deps.env.llm.provider,
+        model: deps.env.llm.model,
       };
       return fallback;
     },
@@ -189,6 +193,8 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
               matchingEventIds,
               ai: outcome.result,
               cached: false,
+              provider: deps.env.llm.provider,
+              model: deps.env.llm.model,
             };
             deps.aiCache.set(cacheKey, response);
             request.log.info(
@@ -196,7 +202,7 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
                 issueId: profile.slug,
                 attempt,
                 latencyMs,
-                model: deps.env.GROQ_MODEL,
+                model: deps.env.llm.model,
                 promptVersion: ISSUE_PROMPT_VERSION,
                 cacheHit: false,
                 success: true,
@@ -215,7 +221,7 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
       }
 
       request.log.info(
-        { issueId: profile.slug, model: deps.env.GROQ_MODEL, promptVersion: ISSUE_PROMPT_VERSION, success: false, reason: lastFailureReason },
+        { issueId: profile.slug, model: deps.env.llm.model, promptVersion: ISSUE_PROMPT_VERSION, success: false, reason: lastFailureReason },
         "ai.issue",
       );
 
@@ -224,6 +230,8 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
         matchingEventIds,
         ai: null,
         message: "AI interpretation is temporarily unavailable. Verified issue evidence remains available.",
+        provider: deps.env.llm.provider,
+        model: deps.env.llm.model,
       };
       return fallback;
     },

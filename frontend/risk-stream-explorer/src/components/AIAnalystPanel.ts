@@ -12,18 +12,25 @@ function observedRecap(observed: ObservedFacts): HTMLElement {
   ]);
 }
 
-function aiBlock(label: string, content: HTMLElement): HTMLElement {
+/** "deepseek/deepseek-v4-flash-0731" -> "deepseek-v4-flash-0731" for display. */
+function shortModelName(model: string): string {
+  const slash = model.lastIndexOf("/");
+  return slash === -1 ? model : model.slice(slash + 1);
+}
+
+function aiBlock(label: string, content: HTMLElement, sourceLabel: string): HTMLElement {
   return el("div", {}, [
-    el("div", { className: "ai-answer__block-label" }, [label, el("span", { className: "ai-source-tag" }, ["— Groq"])]),
+    el("div", { className: "ai-answer__block-label" }, [label, el("span", { className: "ai-source-tag" }, [`— ${sourceLabel}`])]),
     content,
   ]);
 }
 
 function renderSuccess(container: HTMLElement, response: AiPatternResponse & { status: "ok" }, onOpenEvent: (eventId: string) => void): void {
   container.innerHTML = "";
+  const source = shortModelName(response.model);
   const answer = el("div", { className: "ai-answer" }, [
     observedRecap(response.observed),
-    aiBlock("Interpretation", el("div", { className: "ai-answer__text" }, [response.ai.interpretation])),
+    aiBlock("Interpretation", el("div", { className: "ai-answer__text" }, [response.ai.interpretation]), source),
     aiBlock(
       "Investigate",
       el(
@@ -31,9 +38,10 @@ function renderSuccess(container: HTMLElement, response: AiPatternResponse & { s
         { className: "ai-answer__list" },
         response.ai.investigationQuestions.map((q) => el("li", {}, [q])),
       ),
+      source,
     ),
-    aiBlock("Suggested control", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl])),
-    aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations])),
+    aiBlock("Suggested control", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl]), source),
+    aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations]), source),
     el("div", { className: "panel-subsection" }, [
       el("div", { className: "panel-subsection__title" }, ["Evidence — verified Event IDs only"]),
       el(
@@ -76,10 +84,13 @@ function renderError(container: HTMLElement, message: string, onRetry: () => voi
  */
 export function renderAIAnalystPanel(container: HTMLElement, patternId: string, onOpenEvent: (eventId: string) => void): void {
   container.innerHTML = "";
+  // Which model answers is server-side configuration, so the badge starts
+  // generic and is replaced with the real provider once a response names it.
+  const providerBadge = el("span", { className: "ai-panel__live-badge", style: "position:static" }, ["LLM"]);
   container.append(
     el("div", { className: "panel__header" }, [
       el("span", { className: "panel__title" }, ["AI Analyst Assistant"]),
-      el("span", { className: "ai-panel__live-badge", style: "position:static" }, ["GROQ"]),
+      providerBadge,
     ]),
   );
   const body = el("div", { className: "panel__body ai-panel" });
@@ -87,10 +98,12 @@ export function renderAIAnalystPanel(container: HTMLElement, patternId: string, 
 
   function load(): void {
     body.innerHTML = "";
-    body.append(el("div", { className: "ai-loading" }, ["Asking Groq (openai/gpt-oss-120b) to interpret this pattern…"]));
+    body.append(el("div", { className: "ai-loading" }, ["Asking the configured model to interpret this pattern…"]));
 
     fetchAiAnalysis(patternId)
       .then((response) => {
+        providerBadge.textContent = response.provider.toUpperCase();
+        providerBadge.title = `Model: ${response.model}`;
         if (response.status === "ok") {
           renderSuccess(body, response, onOpenEvent);
         } else {

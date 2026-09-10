@@ -178,6 +178,8 @@ export interface GroqStructuredResult {
 export type AiPatternResponse =
   | {
       status: "ok";
+      provider: string;
+      model: string;
       observed: ObservedFacts;
       matchingEventIds: string[];
       ai: GroqStructuredResult;
@@ -185,6 +187,8 @@ export type AiPatternResponse =
     }
   | {
       status: "fallback";
+      provider: string;
+      model: string;
       observed: ObservedFacts;
       matchingEventIds: string[];
       ai: null;
