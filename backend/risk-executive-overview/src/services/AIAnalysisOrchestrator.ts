@@ -1,5 +1,5 @@
 import type { RiskDossier } from "../types/Dossier";
-import { streamCompletion } from "./GroqService";
+import { streamCompletion } from "./LlmService";
 
 /**
  * Shared behavioural contract for every analysis call. The specialist prompt

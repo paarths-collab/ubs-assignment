@@ -5,7 +5,7 @@ import { ManagerInsightRequestSchema } from "../schemas/ai.schema";
 import { normalizeFilters, filterEvents } from "../services/FilterService";
 import { buildScenarioSignals, rankScenarioSignals } from "../services/ScenarioService";
 import { buildRiskDossier } from "../services/DossierService";
-import { isAiConfigured } from "../services/GroqService";
+import { isAiConfigured } from "../services/LlmService";
 import {
   DEEP_ANALYSIS_SECTIONS,
   ENTERPRISE_COMPARISON_SECTION,

@@ -6,7 +6,7 @@ import { AppError } from "../src/utils/errors";
 import type { ManagerInsightResponse } from "../src/schemas/ai.schema";
 
 // Mock GroqService to avoid hitting real API
-vi.mock("../src/services/GroqService", () => ({
+vi.mock("../src/services/LlmService", () => ({
   isAiConfigured: vi.fn(() => true),
   generateManagerInsight: vi.fn(async (factPackage) => ({
     whatHappened: "Test insight happened",
@@ -360,7 +360,7 @@ describe("API Routes (Integration)", () => {
     });
 
     it("returns 200 with available false and reason when AI fails", async () => {
-      const groqService = await import("../src/services/GroqService");
+      const groqService = await import("../src/services/LlmService");
       // Override mock to throw AI_UNAVAILABLE
       const generateManagerInsightMock = vi.mocked(groqService.generateManagerInsight);
       generateManagerInsightMock.mockRejectedValueOnce(

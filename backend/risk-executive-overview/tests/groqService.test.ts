@@ -105,7 +105,7 @@ describe("GroqService", () => {
   describe("generateManagerInsight", () => {
     it("retries exactly once on APIConnectionTimeoutError and succeeds", async () => {
       // Use dynamic import to ensure fresh module with mocked Groq
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage();
       const validResponse = {
@@ -129,7 +129,7 @@ describe("GroqService", () => {
     });
 
     it("retries exactly once on RateLimitError (429) and succeeds", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage();
       const validResponse = {
@@ -154,7 +154,7 @@ describe("GroqService", () => {
     });
 
     it("retries exactly once on 502/503/504 server errors and fails after second attempt", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage();
       const serverError = new APIError(503, { error: "service unavailable" } as any, "Service Unavailable", new Headers());
@@ -173,7 +173,7 @@ describe("GroqService", () => {
     });
 
     it("does NOT retry on non-transient errors like 400 BadRequest", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage();
       const badRequestError = new APIError(400, { error: "bad request" } as any, "Bad Request", new Headers());
@@ -189,7 +189,7 @@ describe("GroqService", () => {
     });
 
     it("throws AI_INVALID_RESPONSE when response is not valid JSON", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage();
       mockCreateFn.mockResolvedValueOnce({
@@ -206,7 +206,7 @@ describe("GroqService", () => {
     });
 
     it("throws AI_INVALID_RESPONSE when schema validation fails", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage();
       const invalidResponse = {
@@ -229,7 +229,7 @@ describe("GroqService", () => {
     });
 
     it("throws AI_INVALID_RESPONSE when response includes invented eventIds not in fact package", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage({
         eventIds: ["SIM-0000001", "SIM-0000002"],
@@ -261,7 +261,7 @@ describe("GroqService", () => {
     });
 
     it("throws AI_INVALID_RESPONSE when response patternId doesn't match fact package", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage({
         patternId: "correct_pattern",
@@ -293,7 +293,7 @@ describe("GroqService", () => {
     });
 
     it("accepts null patternId in response when fact package has null patternId", async () => {
-      const { generateManagerInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight } = await import("../src/services/LlmService");
 
       const factPackage = getTestFactPackage({
         patternId: null,
@@ -322,7 +322,7 @@ describe("GroqService", () => {
 
     it("caches responses and returns cached result on second identical request", async () => {
       // Need a fresh import to get fresh cache
-      const { generateManagerInsight: generateInsight } = await import("../src/services/GroqService");
+      const { generateManagerInsight: generateInsight } = await import("../src/services/LlmService");
 
       const uniqueFactPackage = getTestFactPackage({
         eventIds: ["CACHE-TEST-001"],
@@ -354,7 +354,7 @@ describe("GroqService", () => {
     it("reflects whether GROQ_API_KEY is configured in environment", async () => {
       // Import dynamically to check the value at runtime
       // Note: The actual value depends on the test environment's GROQ_API_KEY
-      const { isAiConfigured } = await import("../src/services/GroqService");
+      const { isAiConfigured } = await import("../src/services/LlmService");
 
       // Just verify it returns a boolean
       const result = isAiConfigured();

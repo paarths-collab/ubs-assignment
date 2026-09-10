@@ -37,7 +37,7 @@ export * from "./services/Breakdown";
 export * from "./config/scenarioTitles";
 export * from "./services/RiskDetailService";
 export * from "./services/AiFactService";
-export * from "./services/GroqService";
+export * from "./services/LlmService";
 export { ActionsService } from "./services/ActionsService";
 
 export { buildApp } from "./app";

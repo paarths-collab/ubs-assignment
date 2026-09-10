@@ -8,6 +8,11 @@ import {
 } from "../schemas/ai.schema";
 import type { AiFactPackage } from "../types/AiFactPackage";
 import { AppError } from "../utils/errors";
+import {
+  completeOpenRouterJson,
+  isOpenRouterConfigured,
+  streamOpenRouter,
+} from "./OpenRouterClient";
 
 /**
  * Fixed system prompt for the Manager Assistant. This is the only place the
@@ -96,8 +101,13 @@ function validateEvidence(response: ManagerInsightResponse, factPackage: AiFactP
   }
 }
 
+/** Falls back to Groq when the env predates the provider switch (e.g. a test's mocked env). */
+function activeProvider(): "groq" | "openrouter" {
+  return env.llmProvider ?? "groq";
+}
+
 export function isAiConfigured(): boolean {
-  return env.aiConfigured;
+  return activeProvider() === "openrouter" ? isOpenRouterConfigured() : Boolean(env.GROQ_API_KEY);
 }
 
 /**
@@ -119,6 +129,10 @@ export async function streamCompletion(
   onDelta: (text: string) => void,
   reasoningEffort: "low" | "medium" | "high" = env.GROQ_REASONING_EFFORT,
 ): Promise<string> {
+  if (activeProvider() === "openrouter") {
+    return streamOpenRouter(systemPrompt, userPrompt, onDelta);
+  }
+
   const groq = getClient();
   let full = "";
 
@@ -167,6 +181,13 @@ export async function generateManagerInsight(factPackage: AiFactPackage): Promis
   const cached = responseCache.get(key);
   if (cached) return cached;
 
+  let rawContent: string;
+
+  if (activeProvider() === "openrouter") {
+    rawContent = await completeOpenRouterJson(SYSTEM_PROMPT, `VERIFIED_FACTS:\n${JSON.stringify(factPackage)}`);
+    return finaliseInsight(rawContent, factPackage, key);
+  }
+
   const groq = getClient();
 
   let completion;
@@ -193,21 +214,30 @@ export async function generateManagerInsight(factPackage: AiFactPackage): Promis
     );
   }
 
-  const rawContent = completion.choices[0]?.message?.content;
-  if (!rawContent) {
-    throw new AppError("AI_INVALID_RESPONSE", "Groq returned an empty response");
+  const content = completion.choices[0]?.message?.content;
+  if (!content) {
+    throw new AppError("AI_INVALID_RESPONSE", "Model returned an empty response");
   }
 
+  return finaliseInsight(content, factPackage, key);
+}
+
+/**
+ * Parse, schema-validate and evidence-check a model response. Shared by both
+ * providers so the guarantees do not depend on which one answered — this is
+ * the real enforcement, since JSON Schema support varies across models.
+ */
+function finaliseInsight(rawContent: string, factPackage: AiFactPackage, key: string): ManagerInsightResponse {
   let parsedJson: unknown;
   try {
     parsedJson = JSON.parse(rawContent);
   } catch {
-    throw new AppError("AI_INVALID_RESPONSE", "Groq response was not valid JSON");
+    throw new AppError("AI_INVALID_RESPONSE", "Model response was not valid JSON");
   }
 
   const validated = ManagerInsightResponseSchema.safeParse(parsedJson);
   if (!validated.success) {
-    throw new AppError("AI_INVALID_RESPONSE", `Groq response failed schema validation: ${validated.error.message}`);
+    throw new AppError("AI_INVALID_RESPONSE", `Model response failed schema validation: ${validated.error.message}`);
   }
 
   validateEvidence(validated.data, factPackage);
