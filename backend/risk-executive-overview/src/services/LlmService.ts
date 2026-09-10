@@ -1,18 +1,18 @@
 import Groq, { APIError, APIConnectionTimeoutError } from "groq-sdk";
-import { env } from "../config/env";
-import { PROMPT_VERSION } from "../config/constants";
+import { env } from "../config/env.js";
+import { PROMPT_VERSION } from "../config/constants.js";
 import {
   MANAGER_INSIGHT_JSON_SCHEMA,
   ManagerInsightResponseSchema,
   type ManagerInsightResponse,
-} from "../schemas/ai.schema";
-import type { AiFactPackage } from "../types/AiFactPackage";
-import { AppError } from "../utils/errors";
+} from "../schemas/ai.schema.js";
+import type { AiFactPackage } from "../types/AiFactPackage.js";
+import { AppError } from "../utils/errors.js";
 import {
   completeOpenRouterJson,
   isOpenRouterConfigured,
   streamOpenRouter,
-} from "./OpenRouterClient";
+} from "./OpenRouterClient.js";
 
 /**
  * Fixed system prompt for the Manager Assistant. This is the only place the

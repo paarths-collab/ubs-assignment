@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { RiskRepository } from "../repositories/RiskRepository";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
 
 export function registerMetadataRoute(app: FastifyInstance, repository: RiskRepository): void {
   app.get("/api/metadata", async () => {

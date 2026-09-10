@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import { isAiConfigured } from "../services/LlmService";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import { isAiConfigured } from "../services/LlmService.js";
 
 export function registerHealthRoute(app: FastifyInstance, repository: RiskRepository): void {
   app.get("/api/health", async () => ({

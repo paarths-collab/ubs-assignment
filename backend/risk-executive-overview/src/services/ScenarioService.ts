@@ -1,24 +1,24 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { RiskPattern } from "../types/Pattern";
-import type { NormalizedFilters } from "../schemas/filters.schema";
-import type { TrendFacts } from "../types/Dossier";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { RiskPattern } from "../types/Pattern.js";
+import type { NormalizedFilters } from "../schemas/filters.schema.js";
+import type { TrendFacts } from "../types/Dossier.js";
 import type {
   BreakdownRow,
   DimensionRating,
   ScenarioAnalytics,
   ScenarioSignal,
   SignalLevel,
-} from "../types/Scenario";
-import { deriveScenarioTitle } from "../config/scenarioTitles";
-import { buildBreakdown } from "./Breakdown";
-import { computeFinancialFacts } from "./FinancialFacts";
-import { computeRecurrenceFacts } from "./RecurrenceService";
-import { computeTrend } from "./DossierService";
-import { deriveReasonCodes } from "./PriorityService";
-import { PRIORITY_THRESHOLDS } from "./PriorityThresholds";
-import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation";
-import { computeDelayStats } from "../utils/statistics";
+} from "../types/Scenario.js";
+import { deriveScenarioTitle } from "../config/scenarioTitles.js";
+import { buildBreakdown } from "./Breakdown.js";
+import { computeFinancialFacts } from "./FinancialFacts.js";
+import { computeRecurrenceFacts } from "./RecurrenceService.js";
+import { computeTrend } from "./DossierService.js";
+import { deriveReasonCodes } from "./PriorityService.js";
+import { PRIORITY_THRESHOLDS } from "./PriorityThresholds.js";
+import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation.js";
+import { computeDelayStats } from "../utils/statistics.js";
 
 export interface FilteredTotals {
   eventCount: number;

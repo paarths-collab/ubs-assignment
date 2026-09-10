@@ -1,9 +1,9 @@
-import type { PrioritySignal, ReasonCode } from "../types/Priority";
-import { type FilteredPattern, buildPatternLabel } from "./PatternService";
-import { computeFinancialFacts } from "./FinancialFacts";
-import { computeRecurrenceFacts } from "./RecurrenceService";
-import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation";
-import { PRIORITY_THRESHOLDS, DEFAULT_PRIORITY_LIMIT } from "./PriorityThresholds";
+import type { PrioritySignal, ReasonCode } from "../types/Priority.js";
+import { type FilteredPattern, buildPatternLabel } from "./PatternService.js";
+import { computeFinancialFacts } from "./FinancialFacts.js";
+import { computeRecurrenceFacts } from "./RecurrenceService.js";
+import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation.js";
+import { PRIORITY_THRESHOLDS, DEFAULT_PRIORITY_LIMIT } from "./PriorityThresholds.js";
 
 /** Exactly the facts a reason code can be derived from — nothing else is in scope for this decision. */
 export interface ReasonCodeFacts {

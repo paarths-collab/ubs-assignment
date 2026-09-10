@@ -1,18 +1,18 @@
 import Fastify, { type FastifyInstance } from "fastify";
 import cors from "@fastify/cors";
-import { env } from "./config/env";
-import { generateRequestId, registerRequestId } from "./middleware/requestId";
-import { registerErrorHandler } from "./middleware/errorHandler";
-import { RiskRepository } from "./repositories/RiskRepository";
-import { ActionsService } from "./services/ActionsService";
-import { registerHealthRoute } from "./routes/health.route";
-import { registerMetadataRoute } from "./routes/metadata.route";
-import { registerOverviewRoute } from "./routes/overview.route";
-import { registerPriorityRoute } from "./routes/priority.route";
-import { registerRiskDetailRoute } from "./routes/risk-detail.route";
-import { registerAiRoute } from "./routes/ai.route";
-import { registerAiStreamRoutes } from "./routes/ai-stream.route";
-import { registerActionsRoute } from "./routes/actions.route";
+import { env } from "./config/env.js";
+import { generateRequestId, registerRequestId } from "./middleware/requestId.js";
+import { registerErrorHandler } from "./middleware/errorHandler.js";
+import { RiskRepository } from "./repositories/RiskRepository.js";
+import { ActionsService } from "./services/ActionsService.js";
+import { registerHealthRoute } from "./routes/health.route.js";
+import { registerMetadataRoute } from "./routes/metadata.route.js";
+import { registerOverviewRoute } from "./routes/overview.route.js";
+import { registerPriorityRoute } from "./routes/priority.route.js";
+import { registerRiskDetailRoute } from "./routes/risk-detail.route.js";
+import { registerAiRoute } from "./routes/ai.route.js";
+import { registerAiStreamRoutes } from "./routes/ai-stream.route.js";
+import { registerActionsRoute } from "./routes/actions.route.js";
 
 const MAX_BODY_BYTES = 1_000_000;
 

@@ -1,15 +1,15 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { ScenarioSignal } from "../types/Scenario";
-import type { NormalizedFilters } from "../schemas/filters.schema";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { ScenarioSignal } from "../types/Scenario.js";
+import type { NormalizedFilters } from "../schemas/filters.schema.js";
 import type {
   ComparisonMetric,
   EnterpriseComparison,
   PeopleConcentration,
   RiskDossier,
   TrendFacts,
-} from "../types/Dossier";
-import { countWhere } from "../utils/aggregation";
+} from "../types/Dossier.js";
+import { countWhere } from "../utils/aggregation.js";
 
 /**
  * Splits the filtered window at its midpoint and compares the two halves.

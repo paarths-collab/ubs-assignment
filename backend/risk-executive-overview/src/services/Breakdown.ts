@@ -1,7 +1,7 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { BreakdownRow } from "../types/Scenario";
-import { computeFinancialFacts } from "./FinancialFacts";
-import { countWhere } from "../utils/aggregation";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { BreakdownRow } from "../types/Scenario.js";
+import { computeFinancialFacts } from "./FinancialFacts.js";
+import { countWhere } from "../utils/aggregation.js";
 
 /**
  * Groups a slice of events by any key and reports the same six figures for

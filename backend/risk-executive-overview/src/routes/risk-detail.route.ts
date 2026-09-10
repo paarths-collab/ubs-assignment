@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import { RiskDetailRequestSchema } from "../schemas/risk-detail.schema";
-import { normalizeFilters, filterEvents } from "../services/FilterService";
-import { resolveSelectionSlice, buildRiskDetail } from "../services/RiskDetailService";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import { RiskDetailRequestSchema } from "../schemas/risk-detail.schema.js";
+import { normalizeFilters, filterEvents } from "../services/FilterService.js";
+import { resolveSelectionSlice, buildRiskDetail } from "../services/RiskDetailService.js";
 
 export function registerRiskDetailRoute(app: FastifyInstance, repository: RiskRepository): void {
   app.post("/api/risk-detail", async (request) => {

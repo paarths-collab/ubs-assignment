@@ -1,4 +1,4 @@
-import type { BreakdownRow } from "./Scenario";
+import type { BreakdownRow } from "./Scenario.js";
 
 /** "Risk Composition" — what the filtered population is made of. */
 export interface CompositionBlock {

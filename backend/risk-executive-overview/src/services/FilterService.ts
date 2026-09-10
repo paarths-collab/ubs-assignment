@@ -1,7 +1,7 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import type { RiskConfig } from "../types/Config";
-import type { FilterInput, NormalizedFilters } from "../schemas/filters.schema";
-import { AppError } from "../utils/errors";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import type { RiskConfig } from "../types/Config.js";
+import type { FilterInput, NormalizedFilters } from "../schemas/filters.schema.js";
+import { AppError } from "../utils/errors.js";
 
 export const ENTERPRISE_WIDE = "Enterprise-wide";
 

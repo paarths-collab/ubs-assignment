@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import { PrioritySignalsRequestSchema } from "../schemas/filters.schema";
-import { normalizeFilters, filterEvents } from "../services/FilterService";
-import { buildScenarioSignals, rankScenarioSignals, buildAttentionCards } from "../services/ScenarioService";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import { PrioritySignalsRequestSchema } from "../schemas/filters.schema.js";
+import { normalizeFilters, filterEvents } from "../services/FilterService.js";
+import { buildScenarioSignals, rankScenarioSignals, buildAttentionCards } from "../services/ScenarioService.js";
 
 export function registerPriorityRoute(app: FastifyInstance, repository: RiskRepository): void {
   app.post("/api/priority-signals", async (request) => {

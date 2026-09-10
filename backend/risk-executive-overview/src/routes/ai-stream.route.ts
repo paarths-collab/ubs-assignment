@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyReply } from "fastify";
-import type { RiskRepository } from "../repositories/RiskRepository";
-import type { RiskDossier } from "../types/Dossier";
-import { FollowUpRequestSchema, ManagerInsightRequestSchema, PortfolioAnalysisRequestSchema } from "../schemas/ai.schema";
-import { normalizeFilters, filterEvents } from "../services/FilterService";
-import { buildScenarioSignals, rankScenarioSignals } from "../services/ScenarioService";
-import { buildRiskDossier } from "../services/DossierService";
-import { buildPortfolioDossier, type PortfolioDossier } from "../services/PortfolioDossierService";
-import { isAiConfigured } from "../services/LlmService";
+import type { RiskRepository } from "../repositories/RiskRepository.js";
+import type { RiskDossier } from "../types/Dossier.js";
+import { FollowUpRequestSchema, ManagerInsightRequestSchema, PortfolioAnalysisRequestSchema } from "../schemas/ai.schema.js";
+import { normalizeFilters, filterEvents } from "../services/FilterService.js";
+import { buildScenarioSignals, rankScenarioSignals } from "../services/ScenarioService.js";
+import { buildRiskDossier } from "../services/DossierService.js";
+import { buildPortfolioDossier, type PortfolioDossier } from "../services/PortfolioDossierService.js";
+import { isAiConfigured } from "../services/LlmService.js";
 import {
   DEEP_ANALYSIS_SECTIONS,
   ENTERPRISE_COMPARISON_SECTION,
@@ -15,10 +15,10 @@ import {
   runAnalysisSection,
   type AnalysisSection,
   type PortfolioLens,
-} from "../services/AIAnalysisOrchestrator";
-import { ANALYST_SYSTEM_PROMPT } from "../services/AIAnalysisOrchestrator";
-import { streamCompletion } from "../services/LlmService";
-import { AppError } from "../utils/errors";
+} from "../services/AIAnalysisOrchestrator.js";
+import { ANALYST_SYSTEM_PROMPT } from "../services/AIAnalysisOrchestrator.js";
+import { streamCompletion } from "../services/LlmService.js";
+import { AppError } from "../utils/errors.js";
 
 const FOLLOW_UP_CONTEXT_LABELS = {
   kpi: "the KPI cards and their underlying filtered population",

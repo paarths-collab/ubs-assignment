@@ -1,5 +1,5 @@
-import type { RiskEvent } from "../types/RiskEvent";
-import { uniqueValues } from "../utils/aggregation";
+import type { RiskEvent } from "../types/RiskEvent.js";
+import { uniqueValues } from "../utils/aggregation.js";
 
 export type RecurrenceCase =
   | "same_person_same_issue"

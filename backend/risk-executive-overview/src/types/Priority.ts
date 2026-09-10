@@ -1,4 +1,4 @@
-import type { PatternType } from "./Pattern";
+import type { PatternType } from "./Pattern.js";
 
 export type ReasonCode =
   | "HIGH_SEVERITY_PRESENT"
