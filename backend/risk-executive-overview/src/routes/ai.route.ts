@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import type { RiskRepository } from "../repositories/RiskRepository.js";
+import type { RiskDetailSelection } from "../types/RiskDetail.js";
 import { ManagerInsightRequestSchema } from "../schemas/ai.schema.js";
 import { normalizeFilters, filterEvents } from "../services/FilterService.js";
 import { buildAiFactPackage } from "../services/AiFactService.js";
@@ -9,6 +10,7 @@ import { AppError } from "../utils/errors.js";
 export function registerAiRoute(app: FastifyInstance, repository: RiskRepository): void {
   app.post("/api/ai/manager-insight", async (request) => {
     const body = ManagerInsightRequestSchema.parse(request.body);
+    const selection = body.selection as RiskDetailSelection;
     const config = repository.getConfig();
 
     const filters = normalizeFilters(body.filters, config);
@@ -16,7 +18,7 @@ export function registerAiRoute(app: FastifyInstance, repository: RiskRepository
     const filteredEventIds = new Set(filteredEvents.map((event) => event.eventId));
 
     const factPackage = buildAiFactPackage(
-      body.selection,
+      selection,
       filters,
       filteredEvents,
       filteredEventIds,
