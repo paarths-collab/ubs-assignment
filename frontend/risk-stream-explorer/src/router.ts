@@ -1,4 +1,4 @@
-export type Route = "home" | "streamgraph" | "patterns" | "issues" | "graph";
+export type Route = "home" | "kpi" | "streamgraph" | "patterns" | "issues" | "graph";
 
 /**
  * Resolves the current route from the URL. Path-based routes (/streamgraph,
@@ -20,6 +20,7 @@ export function currentRoute(): Route {
 
 function routeFromSegment(segment: string): Route {
   if (segment === "streamgraph") return "streamgraph";
+  if (segment === "kpi") return "kpi";
   if (segment === "patterns") return "patterns";
   if (segment === "issues") return "issues";
   if (segment === "graph") return "graph";

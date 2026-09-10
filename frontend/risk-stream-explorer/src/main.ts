@@ -69,7 +69,10 @@ function boot(): void {
 
   function renderRoute(): void {
     const route = currentRoute();
-    if (route === "streamgraph") {
+    if (route === "kpi") {
+      window.location.assign("/kpi");
+      return;
+    } else if (route === "streamgraph") {
       renderStreamgraphPage(repository, loaded!.aiData, root!);
     } else if (route === "issues") {
       renderIssuesPage(root!);
@@ -151,4 +154,3 @@ function renderStreamgraphPage(repository: EventRepository, aiData: unknown, roo
 }
 
 boot();
-
