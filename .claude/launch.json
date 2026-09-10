@@ -27,6 +27,12 @@
       "runtimeExecutable": "python3",
       "runtimeArgs": ["-m", "http.server", "5199", "--directory", "dist"],
       "port": 5199
+    },
+    {
+      "name": "risk-executive-overview-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:overview"],
+      "port": 5180
     }
   ]
 }
