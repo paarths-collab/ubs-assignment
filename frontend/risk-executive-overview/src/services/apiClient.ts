@@ -1,6 +1,4 @@
 import type {
-  ActionApiResponse,
-  ActionType,
   ApiErrorBody,
   FilterInput,
   ManagerInsightApiResponse,
@@ -61,16 +59,5 @@ export function postManagerInsight(filters: FilterInput, selection: RiskDetailSe
   return request<ManagerInsightApiResponse>("/ai/manager-insight", {
     method: "POST",
     body: JSON.stringify({ filters, selection }),
-  });
-}
-
-export function postAction(
-  actionType: ActionType,
-  eventIds: string[],
-  patternId: string | null,
-): Promise<ActionApiResponse> {
-  return request<ActionApiResponse>("/actions", {
-    method: "POST",
-    body: JSON.stringify({ actionType, eventIds, patternId }),
   });
 }
