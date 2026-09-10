@@ -9,35 +9,47 @@ import { renderFollowUpPanel } from "./FollowUpPanel";
  * figure its context — a bare "$2.51M" invites the reader to assume it
  * covers the whole population when it only ever covers Financial events.
  */
+function eventScopeLabel(overview: OverviewResponse): string {
+  switch (overview.filters.eventType) {
+    case "Financial":
+      return "Financial selection";
+    case "Non-Financial":
+      return "Non-Financial selection";
+    default:
+      return "current selection";
+  }
+}
+
 function supportingLine(key: string, overview: OverviewResponse): string {
   const { kpis, eventCount, datasetEventCount, exposure, composition } = overview;
+  const eventScope = eventScopeLabel(overview);
 
   switch (key) {
     case "totalEvents":
-      return `of ${datasetEventCount.toLocaleString()} in dataset`;
+      return `${eventScope} · ${eventCount.toLocaleString()} of ${datasetEventCount.toLocaleString()} in dataset`;
     case "highSeverityEvents": {
       const value = kpis.highSeverityEvents.value ?? 0;
-      return eventCount === 0 ? "no events in selection" : `${formatPercent(value / eventCount)} of filtered events`;
+      return eventCount === 0 ? `no events in ${eventScope}` : `${formatPercent(value / eventCount)} of ${eventScope}`;
     }
     case "openBacklog": {
       const value = kpis.openBacklog.value ?? 0;
-      return `${composition.workflow.highStillOpen} High still open`;
+      return `${composition.workflow.highStillOpen} High still open · ${eventScope}`;
     }
     case "grossExposure":
-      return "Financial events only";
+      return "Financial events in selection";
     case "netExposure":
-      return "after recovery, Financial only";
+      return "after recovery · Financial events in selection";
     case "recoveryRate":
-      return "recovery ÷ gross";
+      return "recovery ÷ gross · Financial events in selection";
     case "potentialImpact": {
-      if (overview.filters.eventType === "Financial") return "Financial events only";
-      if (overview.filters.eventType === "Non-Financial") return "Non-Financial events only";
+      if (overview.filters.eventType === "Financial") return "Financial events in selection";
+      if (overview.filters.eventType === "Non-Financial") return "Non-Financial events in selection";
       return exposure.potential.fromNonFinancialUsd == null
-        ? "Potential-impact events only"
-        : `${formatPercent((exposure.potential.fromNonFinancialUsd ?? 0) / (exposure.potential.totalUsd || 1))} from Non-Financial`;
+        ? "Potential-impact events in selection"
+        : `${formatPercent((exposure.potential.fromNonFinancialUsd ?? 0) / (exposure.potential.totalUsd || 1))} from Non-Financial in selection`;
     }
     case "remediationHours":
-      return `${exposure.operational.averagePerEvent} hrs average per event`;
+      return `${exposure.operational.averagePerEvent} hrs average per event · ${eventScope}`;
     default:
       return "";
   }
