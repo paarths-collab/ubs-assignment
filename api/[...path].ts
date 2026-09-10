@@ -14,7 +14,9 @@ function getApp(): Promise<FastifyInstance> {
 }
 
 /** Vercel catch-all function for the Executive Risk Overview backend API. */
-export default async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
+export async function handler(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const app = await getApp();
   app.server.emit("request", req, res);
 }
+
+export default handler;
