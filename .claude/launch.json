@@ -14,12 +14,6 @@
       "port": 5187
     },
     {
-      "name": "risk-stream-explorer-dev-3",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace=frontend/risk-stream-explorer", "--", "--port", "5191", "--strictPort"],
-      "port": 5191
-    },
-    {
       "name": "risk-relationship-network-dev",
       "runtimeExecutable": "bash",
       "runtimeArgs": [
@@ -35,13 +29,10 @@
       "port": 5199
     },
     {
-      "name": "risk-stream-explorer-backend",
-      "runtimeExecutable": "bash",
-      "runtimeArgs": [
-        "-lc",
-        "cd backend/risk-stream-explorer && PORT=3001 npx tsx watch src/server.ts"
-      ],
-      "port": 3001
+      "name": "risk-executive-overview-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev:overview"],
+      "port": 5180
     }
   ]
 }

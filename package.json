@@ -4,7 +4,9 @@
   "version": "1.0.0",
   "workspaces": [
     "backend/risk-stream-explorer",
-    "frontend/risk-stream-explorer"
+    "backend/risk-executive-overview",
+    "frontend/risk-stream-explorer",
+    "frontend/risk-executive-overview"
   ],
   "scripts": {
     "test": "vitest run --passWithNoTests",
@@ -12,7 +14,10 @@
     "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
     "dev:server": "npm run dev --workspace=backend/risk-stream-explorer",
     "build": "npm run build --workspace=frontend/risk-stream-explorer && node -e \"require('fs').renameSync('dist/index.html','dist/risk-stream-explorer.html')\"",
-    "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json",
+    "dev:api": "npm run dev --workspace=backend/risk-executive-overview",
+    "dev:overview": "npm run dev --workspace=frontend/risk-executive-overview",
+    "build:overview": "npm run build --workspace=frontend/risk-executive-overview",
+    "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p backend/risk-executive-overview/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-executive-overview/tsconfig.json",
     "validate-data": "tsx backend/risk-stream-explorer/scripts/validate-data.ts"
   },
   "devDependencies": {

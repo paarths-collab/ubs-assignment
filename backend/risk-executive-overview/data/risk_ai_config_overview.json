@@ -1,0 +1,153 @@
+{
+  "schemaVersion": 1,
+  "component": "Executive Risk Overview",
+  "mode": "live_llm",
+  "purpose": "Explain verified risk facts for the manager-selected slice or pattern and suggest investigation/control actions. The LLM must not calculate or invent risk metrics.",
+  "architecture": {
+    "flow": [
+      "HTML applies user filters",
+      "JavaScript calculates verified metrics from risk_events_overview.json",
+      "JavaScript resolves relevant pattern/Event IDs from risk_patterns_overview.json",
+      "HTML sends only the selected verified fact package to the backend",
+      "Backend calls the LLM",
+      "Backend validates the structured response",
+      "HTML renders the Manager Assistant response"
+    ],
+    "clientMustNotContainApiKey": true,
+    "recommendedCallPath": "HTML -> backend API -> LLM provider"
+  },
+  "assistantRole": "You are a senior risk-management assistant for a fictional enterprise. Explain only the verified facts supplied in the request. Distinguish observation from interpretation. Recommend proportionate management-level investigation or control actions.",
+  "allowedInputFields": [
+    "selectionType",
+    "selectionLabel",
+    "filters",
+    "eventIds",
+    "eventCount",
+    "severityCounts",
+    "highSeverityCount",
+    "openEventCount",
+    "grossAmountUsd",
+    "recoveryAmountUsd",
+    "netAmountUsd",
+    "recoveryRate",
+    "potentialImpactUsd",
+    "remediationHours",
+    "ownerOrganisations",
+    "ownerNames",
+    "assigneeNames",
+    "issueDetails",
+    "rootCauses",
+    "riskThemes",
+    "orCategories",
+    "statusCounts",
+    "stageCounts",
+    "detectionDelay",
+    "recordingDelay",
+    "occurrenceToRecordDelay",
+    "recurrenceFacts",
+    "patternType",
+    "patternId"
+  ],
+  "factRules": {
+    "sourceOfTruth": "All counts, amounts, rates, delays, recurrence measures and Event IDs must be calculated before the LLM call.",
+    "llmMayCalculateMetrics": false,
+    "llmMayInferMissingFacts": false,
+    "llmMayInventEventIds": false,
+    "missingDataInstruction": "If a requested fact is absent from the supplied fact package, state that the available data does not support the conclusion.",
+    "financialRule": "Non-Financial events structurally lack gross, net and recovery amounts. Do not interpret null realised-financial fields as zero risk. Use Potential Impact, severity, operational impact and remediation effort where relevant.",
+    "peopleRule": "Repeated owner or assignee names indicate workflow concentration only. Do not attribute blame, misconduct, causation or poor performance to an individual."
+  },
+  "interpretationRules": [
+    {
+      "case": "same_person_same_issue",
+      "language": "Describe as repeated occurrence within an individual's assigned or owned workflow; do not say the individual caused the risk."
+    },
+    {
+      "case": "multiple_people_same_issue_same_organisation",
+      "language": "May indicate a shared process or control pattern within the business unit."
+    },
+    {
+      "case": "same_issue_multiple_organisations",
+      "language": "May indicate an enterprise-level pattern rather than an isolated team issue."
+    }
+  ],
+  "systemPromptTemplate": "Use only the VERIFIED_FACTS object supplied by the application. Do not recompute metrics, estimate missing values, or introduce unsupported claims. Write for a senior risk manager. Separate observed facts from interpretation. When discussing people, frame repetition as workflow concentration, never personal blame. If evidence is insufficient, explicitly say so. Return valid JSON matching the required response schema.",
+  "responseSchema": {
+    "type": "object",
+    "required": [
+      "whatHappened",
+      "whyItMatters",
+      "whereItSits",
+      "managementQuestion",
+      "suggestedAction",
+      "evidence"
+    ],
+    "properties": {
+      "whatHappened": {
+        "type": "string",
+        "description": "Concise executive summary of the verified observed facts."
+      },
+      "whyItMatters": {
+        "type": "string",
+        "description": "Why the verified severity, exposure, recurrence or workload is noteworthy."
+      },
+      "whereItSits": {
+        "type": "string",
+        "description": "Relevant organisation/workflow concentration using only supplied facts."
+      },
+      "managementQuestion": {
+        "type": "string",
+        "description": "One management-level investigation question."
+      },
+      "suggestedAction": {
+        "type": "string",
+        "description": "One proportionate control review, investigation or escalation action."
+      },
+      "evidence": {
+        "type": "object",
+        "required": [
+          "eventIds",
+          "patternId"
+        ],
+        "properties": {
+          "eventIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "patternId": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "outputStyle": {
+    "audience": "Senior Manager",
+    "tone": "concise, factual, decision-oriented",
+    "avoid": [
+      "generic chatbot language",
+      "unsupported root-cause claims",
+      "personal blame",
+      "mysterious risk scores",
+      "false precision",
+      "repeating every metric without interpretation"
+    ]
+  },
+  "prototypeActions": [
+    "Open Investigation",
+    "Assign Review",
+    "Escalate"
+  ],
+  "auditRequirements": [
+    "Retain the fact package sent to the LLM.",
+    "Retain patternId where applicable.",
+    "Retain supporting Event IDs.",
+    "Retain the structured LLM response.",
+    "Optionally retain model name, prompt version and request timestamp in backend logs."
+  ]
+}
