@@ -45,13 +45,6 @@ export function renderIssuesPage(root: HTMLElement): void {
   root.append(main);
 
   main.append(
-    el("div", { className: "synthetic-banner" }, [
-      el("strong", {}, ["Synthetic data notice:"]),
-      " Every event, issue, pattern, organisation and person on this page is 100% simulated for an internship take-home project. This is not real UBS data, and no AI-generated text here should be treated as verified fact — only the numbers and IDs are.",
-    ]),
-  );
-
-  main.append(
     el("div", { className: "issues-intro" }, [
       el("p", {}, [
         "Issues are ranked by named, transparent signals — not an opaque AI score. Each signal is individually explainable with the number behind it. Dimensions that carry no information across issues (event count, organisation count, owner count, top-organisation volume share) are deliberately excluded from ranking and narrative.",

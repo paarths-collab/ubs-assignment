@@ -1,22 +1,5 @@
 /* ---------- Component 4: Pattern Intelligence ---------- */
 
-.synthetic-banner {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  border: 1px solid var(--accent-amber-dim);
-  background: var(--accent-amber-glow);
-  border-radius: var(--radius-md);
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-}
-
-.synthetic-banner strong {
-  color: var(--accent-amber);
-}
-
 /*
  * The issue analysis runs full width — its tables (root cause, organisation,
  * enterprise comparison) are dense and were being squeezed by a side column
