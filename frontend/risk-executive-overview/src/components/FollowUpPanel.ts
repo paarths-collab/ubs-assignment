@@ -14,7 +14,7 @@ export function renderFollowUpPanel(
   panel.root.classList.add("follow-up__panel");
   panel.root.hidden = true;
 
-  const toggle = el("button", { type: "button", className: "follow-up-toggle" }, ["Ask AI"] ) as HTMLButtonElement;
+  const toggle = el("button", { type: "button", className: "follow-up-toggle" }, ["Ask AI"]) as HTMLButtonElement;
   toggle.addEventListener("click", () => {
     panel.root.hidden = false;
     toggle.hidden = true;

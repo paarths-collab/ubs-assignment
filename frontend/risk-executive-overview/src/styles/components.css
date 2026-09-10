@@ -1161,6 +1161,11 @@ button {
   margin: 0;
 }
 
+/* `.analysis` sets display:flex, so explicitly honour the HTML hidden state. */
+.follow-up__panel[hidden] {
+  display: none;
+}
+
 .follow-up__form {
   display: flex;
   gap: 0.6rem;
