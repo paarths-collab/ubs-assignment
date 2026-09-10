@@ -1133,6 +1133,34 @@ button {
 
 .analysis__error { color: var(--accent-red); }
 
+.follow-up {
+  margin: 0 var(--space-4) var(--space-3);
+}
+
+.follow-up-toggle {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border-hairline);
+  border-radius: 999px;
+  color: var(--text-muted);
+  background: transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.follow-up-toggle:hover,
+.follow-up-toggle:focus-visible {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary-dim);
+  background: var(--accent-primary-glow);
+}
+
+.follow-up__panel {
+  margin: 0;
+}
+
 .follow-up__form {
   display: flex;
   gap: 0.6rem;
