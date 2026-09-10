@@ -45,7 +45,7 @@ function followUpComposer(onAsk: (question: string) => Promise<string>): HTMLEle
   return form;
 }
 
-/** "deepseek/deepseek-v4-flash-0731" -> "deepseek-v4-flash-0731" for display. */
+/** "deepseek/deepseek-v4-flash" -> "deepseek-v4-flash" for display. */
 function shortModelName(model: string): string {
   const slash = model.lastIndexOf("/");
   return slash === -1 ? model : model.slice(slash + 1);

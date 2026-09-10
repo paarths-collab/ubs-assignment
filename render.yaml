@@ -29,6 +29,6 @@ services:
       - key: LLM_PROVIDER
         value: openrouter
       - key: LLM_MODEL
-        value: deepseek/deepseek-v4-flash-0731
+        value: deepseek/deepseek-v4-flash
       - key: OPENROUTER_API_KEY
         sync: false
