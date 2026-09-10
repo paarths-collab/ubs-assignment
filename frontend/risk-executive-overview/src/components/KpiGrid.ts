@@ -29,10 +29,13 @@ function supportingLine(key: string, overview: OverviewResponse): string {
       return "after recovery, Financial only";
     case "recoveryRate":
       return "recovery ÷ gross";
-    case "potentialImpact":
+    case "potentialImpact": {
+      if (overview.filters.eventType === "Financial") return "Financial events only";
+      if (overview.filters.eventType === "Non-Financial") return "Non-Financial events only";
       return exposure.potential.fromNonFinancialUsd == null
-        ? "Financial + Non-Financial"
+        ? "Potential-impact events only"
         : `${formatPercent((exposure.potential.fromNonFinancialUsd ?? 0) / (exposure.potential.totalUsd || 1))} from Non-Financial`;
+    }
     case "remediationHours":
       return `${exposure.operational.averagePerEvent} hrs average per event`;
     default:
