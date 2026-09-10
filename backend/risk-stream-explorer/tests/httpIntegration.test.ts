@@ -11,9 +11,21 @@ import { GroqService, type GroqClientLike } from "../src/services/GroqService";
 import { makePattern, makePatternsDataset, makeRiskEvent, resetRiskFixtureCounters } from "./riskFixtures";
 
 function testEnv(overrides: Partial<Env> = {}): Env {
+  // `llm` is derived from the legacy GROQ_* values so overriding either one
+  // keeps the two in sync; an explicit `llm` override still wins.
+  const GROQ_API_KEY = overrides.GROQ_API_KEY ?? "test-key";
+  const GROQ_MODEL = overrides.GROQ_MODEL ?? "test-model";
   return {
-    GROQ_API_KEY: "test-key",
-    GROQ_MODEL: "test-model",
+    GROQ_API_KEY,
+    GROQ_MODEL,
+    llm: {
+      provider: "groq",
+      apiKey: GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+      model: GROQ_MODEL,
+      referer: "http://localhost:3001",
+      title: "test",
+    },
     PORT: 0,
     CORS_ORIGIN: ["http://localhost:5173"],
     AI_TIMEOUT_MS: 5000,
@@ -32,6 +44,11 @@ function completionWith(content: string) {
 }
 
 const VALID_AI_JSON = JSON.stringify({
+  strongestFinding: "The pattern contains a concentrated combination that warrants review.",
+  whyItMayMatter: "The verified comparison is unusual enough to prioritize investigation.",
+  supportingEvidence: "The matching events and deterministic metrics support a focused review.",
+  investigationHypothesis: "A recurring workflow condition may contribute to the observed pattern.",
+  whatWouldDisproveThis: "Additional data showing no recurrence would weaken the hypothesis.",
   interpretation: "This may indicate a workflow gap.",
   investigationQuestions: ["What changed?", "Is this one team?", "When did it start?"],
   suggestedControl: "Add independent verification.",
@@ -143,9 +160,9 @@ describe("HTTP integration (Fastify inject)", () => {
     const res = await app.inject({ method: "POST", url: `/api/ai/pattern/${pattern.pattern_id}` });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.status).toBe("fallback");
-    expect(body.ai).toBeNull();
-    expect(body.message).toContain("temporarily unavailable");
+    expect(body.status).toBe("ok");
+    expect(body.ai.limitations).toContain("verified deterministic fallback");
+    expect(body.model).toBe("verified-deterministic-fallback");
   });
 
   it("POST /api/ai/pattern/:patternId rejects (and regenerates away from) a hallucinated Event ID, then falls back if it keeps happening", async () => {
@@ -161,7 +178,8 @@ describe("HTTP integration (Fastify inject)", () => {
     const res = await app.inject({ method: "POST", url: `/api/ai/pattern/${pattern.pattern_id}` });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.status).toBe("fallback");
+    expect(body.status).toBe("ok");
+    expect(body.ai.interpretation).not.toContain("SIM-9999999");
     // One regeneration attempt was made on top of the initial call.
     expect(create).toHaveBeenCalledTimes(2);
   });

@@ -1,17 +1,13 @@
-import {
-  detectTrendFacts,
-  getPeriodDetail,
-  rankTrendFacts,
-  type PeriodInsightIntent,
-} from "@backend/index";
-import { formatDays, formatMoney, formatPercent, shortOrganisationName } from "@backend/index";
+import { getPeriodDetail, type PeriodInsightIntent } from "@backend/index";
+import { formatDays, formatMoney, formatPercent } from "@backend/index";
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { metricCard, deltaBadge } from "./metricCard";
 import { breakdownList } from "./breakdownList";
 import { renderAIPanel } from "./AIInsightPanel";
 import { renderEventCard } from "./EventCard";
-import { buildPeriodMessages } from "../services/promptBuilder";
+import { analysePeriod } from "../services/LLMClient";
+import { followUpComposer } from "./FollowUpComposer";
 
 const PERIOD_AI_ACTIONS: { intent: PeriodInsightIntent; label: string }[] = [
   { intent: "explain_period", label: "Explain this period" },
@@ -93,23 +89,18 @@ export function renderPeriodInvestigation(ctx: AppContext, container: HTMLElemen
         ]),
 
         el("div", { className: "section-grid", style: "margin-top:20px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))" }, [
-          el("div", {}, [el("div", { className: "panel__title", style: "margin-bottom:10px" }, ["Top organisations"]), breakdownList(m.organisationBreakdown)]),
-          el("div", {}, [el("div", { className: "panel__title", style: "margin-bottom:10px" }, ["Top root causes"]), breakdownList(m.rootCauseBreakdown)]),
-          el("div", {}, [el("div", { className: "panel__title", style: "margin-bottom:10px" }, ["Top issues"]), breakdownList(m.issueDetailBreakdown)]),
+          el("div", {}, [el("div", { className: "panel__title", style: "margin-bottom:10px" }, ["Top organisations"]), breakdownList(m.organisationBreakdown), followUpComposer("Top organisations", (q, s) => analysePeriod("explain_period", state.granularity, period.id, state.filters, q, s))]),
+          el("div", {}, [el("div", { className: "panel__title", style: "margin-bottom:10px" }, ["Top root causes"]), breakdownList(m.rootCauseBreakdown), followUpComposer("Top root causes", (q, s) => analysePeriod("what_is_driving_change", state.granularity, period.id, state.filters, q, s))]),
+          el("div", {}, [el("div", { className: "panel__title", style: "margin-bottom:10px" }, ["Top issues"]), breakdownList(m.issueDetailBreakdown), followUpComposer("Top issues", (q, s) => analysePeriod("what_to_investigate", state.granularity, period.id, state.filters, q, s))]),
         ]),
 
         (() => {
           const aiHost = el("div", { className: "ai-panel", style: "margin-top:20px" });
-          const scopeDescription = state.filters.organisation
-            ? shortOrganisationName(state.filters.organisation)
-            : "Enterprise-wide";
-          const rankedTrendFacts = rankTrendFacts(
-            detectTrendFacts(detail.comparison.current, detail.comparison.previous),
-          );
+          // Only the selection goes to the server; it recomputes the facts.
           renderAIPanel(
             aiHost,
             PERIOD_AI_ACTIONS,
-            (intent) => buildPeriodMessages(intent, scopeDescription, detail.comparison, rankedTrendFacts),
+            (intent, question, focusSection) => analysePeriod(intent, state.granularity, period.id, state.filters, question, focusSection),
             "AI Risk Analyst — Period",
           );
           return aiHost;
@@ -129,11 +120,13 @@ export function renderPeriodInvestigation(ctx: AppContext, container: HTMLElemen
                   day.date,
                   el("span", { className: "day-group__count" }, [`${day.events.length} event${day.events.length === 1 ? "" : "s"}`]),
                 ]),
-                el(
-                  "div",
-                  { className: "event-card-list" },
-                  day.events.map((event) => renderEventCard(event, () => ctx.selectEvent(event.eventId))),
-                ),
+                followUpComposer(`Events on ${day.date}`, (q, s) => analysePeriod("explain_period", state.granularity, period.id, state.filters, q, s)),
+                el("div", { className: "event-card-list" }, day.events.map((event) =>
+                  el("div", { className: "event-card-with-followup" }, [
+                    renderEventCard(event, () => ctx.selectEvent(event.eventId)),
+                    followUpComposer(`event ${event.eventId}`, (q, s) => analysePeriod("explain_period", state.granularity, period.id, state.filters, q, `${s} (${event.eventId})`)),
+                  ]),
+                )),
               ]),
             )
           : [el("div", { className: "empty-state" }, ["No events in this period under the active filters."])],

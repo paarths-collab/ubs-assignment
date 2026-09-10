@@ -160,9 +160,9 @@ describe("Issue routes (HTTP integration)", () => {
     const res = await app.inject({ method: "POST", url: `/api/ai/issue/${ISSUE_SLUG}` });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.status).toBe("fallback");
-    expect(body.ai).toBeNull();
-    expect(body.message).toContain("temporarily unavailable");
+    expect(body.status).toBe("ok");
+    expect(body.ai.limitations).toContain("verified deterministic fallback");
+    expect(body.model).toBe("verified-deterministic-fallback");
   });
 
   it("POST /api/ai/issue/:issueId rejects a hallucinated Event ID and falls back after regeneration", async () => {
@@ -183,7 +183,8 @@ describe("Issue routes (HTTP integration)", () => {
     const res = await app.inject({ method: "POST", url: `/api/ai/issue/${ISSUE_SLUG}` });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.status).toBe("fallback");
+    expect(body.status).toBe("ok");
+    expect(body.ai.strongestFinding).not.toContain("SIM-9999999");
     expect(create).toHaveBeenCalledTimes(2);
   });
 

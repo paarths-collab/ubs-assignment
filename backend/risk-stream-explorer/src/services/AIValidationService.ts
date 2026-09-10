@@ -6,6 +6,11 @@ const MIN_QUESTIONS = 2;
 const MAX_QUESTIONS = 8;
 
 const GroqStructuredResultSchema = z.object({
+  strongestFinding: z.string().trim().min(1),
+  whyItMayMatter: z.string().trim().min(1),
+  supportingEvidence: z.string().trim().min(1),
+  investigationHypothesis: z.string().trim().min(1),
+  whatWouldDisproveThis: z.string().trim().min(1),
   interpretation: z.string().trim().min(1),
   investigationQuestions: z.array(z.string().trim().min(1)).min(MIN_QUESTIONS).max(MAX_QUESTIONS),
   suggestedControl: z.string().trim().min(1),
@@ -53,6 +58,12 @@ export function validateGroqResult(raw: unknown, allowedEventIds: readonly strin
   const combinedText = [
     parsed.data.interpretation,
     ...parsed.data.investigationQuestions,
+    parsed.data.strongestFinding,
+    parsed.data.whyItMayMatter,
+    parsed.data.supportingEvidence,
+    parsed.data.investigationHypothesis,
+    parsed.data.whatWouldDisproveThis,
+    parsed.data.interpretation,
     parsed.data.suggestedControl,
     parsed.data.limitations,
   ].join("\n");

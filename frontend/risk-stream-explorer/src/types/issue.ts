@@ -16,13 +16,33 @@ export type SignalId =
   | "OPEN_WORKLOAD"
   | "SLOW_DETECTION"
   | "SLOW_RECORDING"
-  | "LONG_EVENT_JOURNEY";
+  | "LONG_EVENT_JOURNEY"
+  | "ORG_HIGH_RATE_VARIATION";
+
+/** Dimensions on which an issue is NOT unusual — the case against investigating it. */
+export type CounterSignalId =
+  | "DETECTION_NEAR_BASELINE"
+  | "RECORDING_NEAR_BASELINE"
+  | "JOURNEY_NEAR_BASELINE"
+  | "OPEN_RATE_NEAR_BASELINE"
+  | "NO_MATERIAL_TREND"
+  | "NO_STRONG_ROOT_CAUSE_INTERACTION"
+  | "SEVERITY_AT_OR_BELOW_BASELINE";
+
+export type SignalTier = "primary" | "secondary";
+
+export interface CounterSignal {
+  id: CounterSignalId;
+  label: string;
+  detail: string;
+}
 
 export interface TriggeredSignal {
   id: SignalId;
   label: string;
   detail: string;
   weight: number;
+  tier: SignalTier;
 }
 
 export interface IssueSeveritySummary {
@@ -135,6 +155,7 @@ export interface IssueProfile {
   matchingEventIds: string[];
   relatedPatterns: RelatedPatternRef[];
   triggeredSignals: TriggeredSignal[];
+  counterSignals: CounterSignal[];
   rankScore: number;
 }
 
@@ -144,6 +165,9 @@ export interface IssueSummary {
   rank: number;
   rankScore: number;
   triggeredSignals: TriggeredSignal[];
+  counterSignals: CounterSignal[];
+  /** Deterministic sentence naming why this issue was selected — cards lead with this, not raw metrics. */
+  whyItSurfaced: string;
   headline: {
     event_count: number;
     high_rate_pct: number;
@@ -168,13 +192,25 @@ export interface IssueDetailResponse {
   deterministicSummary: string;
 }
 
-export interface GroqIssueStructuredResult {
-  interpretation: string;
+/**
+ * Synthesis, not summary: the model argues the case and against it. Every
+ * field is prose — numbers, Event IDs, organisations and severities are
+ * merged server-side from the deterministic profile, never taken from here.
+ */
+export interface LlmIssueStructuredResult {
+  strongestFinding: string;
   whyItMayMatter: string;
+  supportingEvidence: string;
+  weakeningEvidence: string;
+  investigationHypothesis: string;
+  whatWouldDisproveThis: string;
   investigationQuestions: string[];
   suggestedControl: string;
   limitations: string;
 }
+
+/** @deprecated Provider-neutral name is `LlmIssueStructuredResult`. */
+export type GroqIssueStructuredResult = LlmIssueStructuredResult;
 
 export type AiIssueResponse =
   | {
@@ -192,4 +228,11 @@ export type AiIssueResponse =
       matchingEventIds: string[];
       ai: null;
       message: string;
-    };
+  };
+
+export interface IssueFollowUpResponse {
+  status: "ok";
+  answer: string;
+  provider: string;
+  model: string;
+}

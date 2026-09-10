@@ -2,7 +2,7 @@
  * Bumping this invalidates the AI cache (cache key includes it) — bump
  * whenever the system prompt or the requested schema changes meaningfully.
  */
-export const PROMPT_VERSION = "v1";
+export const PROMPT_VERSION = "v2";
 
 /**
  * System prompt for the pattern-analysis structured-output call. The model
@@ -25,8 +25,13 @@ export function buildSystemPrompt(): string {
     "- Do not quantify or newly estimate remediation hours, affected-record counts, or any other operational-impact figures. You may note that the narrative text references such figures, but do not turn them into new quantitative claims of your own.",
     "- Do not add any numbers, IDs, organisations, or people beyond what is present in the payload.",
     "",
-    "Respond with exactly these four fields:",
-    "- interpretation: a cautious interpretation of what this pattern may indicate, grounded only in the supplied facts.",
+    "Respond with exactly these nine fields:",
+    "- strongestFinding: one or two cautious sentences identifying the most notable verified signal.",
+    "- whyItMayMatter: explain why this pattern deserves analyst attention, without claiming causality.",
+    "- supportingEvidence: connect the observed metrics, enterprise comparison, dimensions, and narrative context into a detailed evidence-based explanation.",
+    "- investigationHypothesis: one specific, testable hypothesis in hedged language.",
+    "- whatWouldDisproveThis: one concrete observation that would weaken or disprove that hypothesis.",
+    "- interpretation: a concise synthesis of what the pattern may indicate, grounded only in the supplied facts.",
     "- investigationQuestions: 3 to 5 specific, concrete questions an investigator should ask next.",
     "- suggestedControl: a suggested control or process improvement. You may draw on the payload's narrative_context (opportunities / root_cause_details) but present it as a prior observation, not as something you personally discovered.",
     "- limitations: must acknowledge that (a) this is synthetic/simulated data, not real, (b) the supporting sample size may be small, (c) correlation is not causation, and (d) any operational-impact figures referenced in source narrative text are unvalidated and not treated as verified facts.",

@@ -20,7 +20,7 @@ npm run dev
 ```bash
 # terminal 1 — backend API on :3001
 cp backend/risk-stream-explorer/.env.example backend/risk-stream-explorer/.env
-# fill in GROQ_API_KEY in that .env (optional — without it, the AI Analyst
+# fill in OPENROUTER_API_KEY in that .env (optional — without it, the AI Analyst
 # panel gracefully shows a "temporarily unavailable" fallback; every
 # deterministic panel still works)
 npm run dev:server
@@ -33,9 +33,11 @@ Then open the frontend and navigate to **Pattern Intelligence** from the landing
 
 The frontend talks to the backend via `VITE_API_BASE_URL` (defaults to `http://localhost:3001`); the backend allows CORS from `CORS_ORIGIN` (defaults to `http://localhost:5173`) — keep these in sync if you change either port.
 
-### Why Component 4 needs a server at all
+### Why the AI features need a server at all
 
-Components 1-3 call Groq directly from the browser using a viewer-supplied API key stored in `localStorage`. That's intentional for those components, but wrong for Component 4: its Groq key must never reach the browser. So Component 4 introduces this repo's first HTTP server — the Groq key lives only in the backend's `.env`, and the frontend only ever calls the backend.
+All four components call the backend for live AI analysis. The OpenRouter key lives only in the backend's `.env`; it is never sent to the browser or stored in `localStorage`. The backend recomputes the verified facts from the canonical datasets, sends only those facts to the configured model, validates structured responses where applicable, and falls back safely when the provider is unavailable.
+
+The default provider is OpenRouter with `deepseek/deepseek-v4-flash-0731`. Set `OPENROUTER_API_KEY` in `backend/risk-stream-explorer/.env` before starting the server. The model is billed by OpenRouter; it is not an OpenRouter free model.
 
 ## Testing & typechecking
 

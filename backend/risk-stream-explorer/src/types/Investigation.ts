@@ -14,6 +14,11 @@ export interface Investigation {
 /** The four fields Groq is allowed to produce — everything else in the AI
  * route response comes from already-verified deterministic facts. */
 export interface GroqStructuredResult {
+  strongestFinding: string;
+  whyItMayMatter: string;
+  supportingEvidence: string;
+  investigationHypothesis: string;
+  whatWouldDisproveThis: string;
   interpretation: string;
   investigationQuestions: string[];
   suggestedControl: string;

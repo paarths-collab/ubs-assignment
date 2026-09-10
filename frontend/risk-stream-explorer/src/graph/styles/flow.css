@@ -1,0 +1,186 @@
+/* Flow breadcrumb trail and navigation */
+.graph-page .flow-breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  font-size: 0.78rem;
+  color: var(--text-1);
+}
+
+.graph-page .flow-breadcrumb-link {
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: inherit;
+  padding: 0;
+  text-decoration: none;
+}
+
+.graph-page .flow-breadcrumb-link:hover {
+  text-decoration: underline;
+}
+
+.graph-page .flow-breadcrumb-current {
+  color: var(--text-0);
+  font-weight: 600;
+}
+
+.graph-page .flow-breadcrumb-sep {
+  color: var(--text-muted);
+}
+
+/* "You are here" context header — what's selected, and what the columns to its right show */
+.graph-page .flow-context {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  margin: 0.1rem 0 0.3rem;
+}
+
+.graph-page .flow-context-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.graph-page .flow-context-detail {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.graph-page .flow-template-note {
+  font-size: 0.68rem;
+  color: var(--accent);
+}
+
+/* Flow controls toolbar */
+.graph-page .flow-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.3rem 0;
+  border-top: 1px solid rgba(214, 169, 40, 0.16);
+  border-bottom: 1px solid rgba(214, 169, 40, 0.16);
+}
+
+.graph-page .flow-template-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--accent);
+  font-size: 0.7rem;
+}
+
+.graph-page .flow-template-select {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  border-radius: 4px;
+  padding: 0.3rem 1.7rem 0.3rem 0.5rem;
+  font-size: 0.72rem;
+}
+
+.graph-page .flow-ai-button {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 60%, var(--border));
+  color: var(--accent);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.graph-page .flow-ai-button:hover {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+}
+
+/* View mode segmented button group */
+.graph-page .flow-view-group {
+  display: inline-flex;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.graph-page .flow-view-btn {
+  background: var(--bg-2);
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 0.3rem 0.6rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.graph-page .flow-view-btn:first-child {
+  border-left: none;
+}
+
+.graph-page .flow-view-btn:hover:not(.active) {
+  color: var(--text-0);
+}
+
+.graph-page .flow-view-btn.active {
+  background: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Toggle events button */
+.graph-page .flow-toggle-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.graph-page .flow-toggle-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+}
+
+.graph-page .flow-toggle-btn.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Reset button */
+.graph-page .flow-reset-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Column headers in flow layout */
+.graph-page .flow-column-header {
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* More items hint */
+.graph-page .flow-more-hint {
+  font-size: 0.7rem;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.graph-page .flow-more-hint:hover {
+  text-decoration: underline;
+}
+
+/* Empty state message */
+.graph-page .flow-empty-state {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 1rem;
+  text-align: center;
+}

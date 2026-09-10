@@ -4,6 +4,11 @@ import { validateGroqIssueResult, validateGroqResult } from "../src/services/AIV
 const ALLOWED_IDS = ["SIM-0000025", "SIM-0000130"];
 
 const VALID_RESULT = {
+  strongestFinding: "The strongest finding is an elevated combination, though it is not causal proof.",
+  whyItMayMatter: "The comparison is unusual enough to warrant investigation against the enterprise baseline.",
+  supportingEvidence: "The verified pattern metrics and matching events support a focused review.",
+  investigationHypothesis: "A repeated workflow condition may be contributing to the observed combination.",
+  whatWouldDisproveThis: "Additional data showing no recurrence would weaken the hypothesis.",
   interpretation: "This pattern may indicate a workflow gap.",
   investigationQuestions: ["What changed in the intake process?", "Is this concentrated in one team?", "When did volume start rising?"],
   suggestedControl: "Add an independent verification step before submission.",

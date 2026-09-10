@@ -1,0 +1,1499 @@
+/*
+ * Shared design tokens, kept in sync with the Risk Stream Explorer
+ * component so the two halves of the suite read as one product.
+ */
+.graph-page {
+  --bg-void: #000000;
+  --bg-base: #060607;
+  --bg-panel: #0c0d0f;
+  --bg-panel-raised: #17181b;
+  --bg-inset: #08090a;
+  --border-hairline: #232427;
+  --border-strong: #34363b;
+
+  --text-primary: #e8d39a;
+  --text-secondary: #b8a96e;
+  --text-muted: #7f7657;
+  --text-disabled: #3d3f43;
+
+  --accent-primary: #d6a928;
+  --accent-primary-dim: #8e7016;
+  --accent-primary-glow: rgba(214, 169, 40, 0.18);
+
+  --accent-red: #ef4444;
+  --accent-green: #22c55e;
+  --accent-gold: #e5b53c;
+  --accent-amber: #f5a623;
+
+  --severity-low: #22c55e;
+  --severity-moderate: #f5a623;
+  --severity-high: #ef4444;
+
+  --eventtype-financial: #3772ff;
+  --eventtype-nonfinancial: #7c8794;
+
+  /* Extensions: two further hues so all eight node types stay distinguishable. */
+  --accent-violet: #a855f7;
+  --accent-cyan: #06b6d4;
+
+  --font-mono: "SF Mono", "IBM Plex Mono", ui-monospace, "Cascadia Code", Menlo, Consolas, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+
+  color-scheme: dark;
+
+  /* Local aliases used throughout this component. */
+  --bg-0: var(--bg-base);
+  --bg-1: var(--bg-panel);
+  --bg-2: var(--bg-panel-raised);
+  --border: var(--border-hairline);
+  --accent: var(--accent-primary);
+  --accent-strong: #f0c34a;
+  --text-0: var(--text-primary);
+  --text-1: var(--text-secondary);
+  --danger: var(--accent-red);
+}
+
+.graph-page,
+.graph-page * {
+  box-sizing: border-box;
+}
+
+.graph-page {
+  background: var(--bg-0);
+  color: var(--text-0);
+  font-family: var(--font-sans);
+}
+
+/* Figures read as data, not prose. */
+.graph-page .stat-value,
+.graph-page .related-count,
+.graph-page .event-table td.numeric,
+.graph-page .evidence-chip,
+.graph-page .scope-badge {
+  font-family: var(--font-mono);
+}
+
+.graph-page .ai-toggle {
+  background: transparent;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 0.32rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.graph-page .ai-toggle:hover {
+  background: var(--accent);
+  color: var(--bg-0);
+}
+
+.graph-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.graph-page .app-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
+  gap: 0.8rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-1);
+  border-bottom: 1px solid var(--border);
+}
+
+.graph-page .app-header h1 {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.graph-page .synthetic-badge {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bg-void);
+  background: var(--accent-gold);
+  padding: 0.15rem 0.5rem;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+/*
+ * Severity carries the shared semantic colours wherever it is shown.
+ * Selectors are specific enough to win against the table and inspector
+ * base text colours.
+ */
+.graph-page .severity-High,
+.graph-page .event-table td.severity-High,
+.graph-page .stat-row .stat-label.severity-High {
+  color: var(--severity-high);
+}
+
+.graph-page .severity-Moderate,
+.graph-page .event-table td.severity-Moderate,
+.graph-page .stat-row .stat-label.severity-Moderate {
+  color: var(--severity-moderate);
+}
+
+.graph-page .severity-Low,
+.graph-page .event-table td.severity-Low,
+.graph-page .stat-row .stat-label.severity-Low {
+  color: var(--severity-low);
+}
+
+.graph-page .search-box {
+  flex: 0 1 18rem;
+  min-width: 15rem;
+  position: relative;
+  max-width: 24rem;
+}
+
+.graph-page .search-box input {
+  width: 100%;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  padding: 0.45rem 0.7rem;
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.graph-page .search-box input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.graph-page .search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.25rem;
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  max-height: 20rem;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+.graph-page .search-result {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem 0.7rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-0);
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.graph-page .search-result:last-child {
+  border-bottom: none;
+}
+
+.graph-page .search-result:hover,
+.graph-page .search-result:focus {
+  background: var(--bg-0);
+  outline: none;
+}
+
+.graph-page .search-result-main {
+  display: flex;
+  align-items: baseline;
+  gap: 0.15rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.graph-page .search-result-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-page .search-result-context {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
+}
+
+.graph-page .search-result .type-tag {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.graph-page .search-result.out-of-scope .type-tag {
+  color: var(--danger);
+}
+
+.graph-page .app-body {
+  flex: 1;
+  display: grid;
+  /* The filter drawer sizes to its own content (auto) so its collapsed
+     80px width (see .filter-panel:has(.filter-panel-body[hidden]) below)
+     actually shrinks the column instead of leaving empty space beside it. */
+  grid-template-columns: auto minmax(0, 1fr) 340px;
+  /* Constrain the row to the available height so the side panels scroll
+     internally instead of stretching the graph canvas to content height. */
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.graph-page .priority-home {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 1.35rem 1.5rem 2rem;
+  background: var(--bg-void);
+}
+
+.graph-page .priority-home-header {
+  max-width: 76rem;
+  margin: 0 auto 1.15rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(214, 169, 40, 0.2);
+  padding-bottom: 1rem;
+}
+
+.graph-page .priority-home-header h2 {
+  color: var(--accent);
+  font-size: 1.25rem;
+  margin: 0.15rem 0 0.35rem;
+}
+
+.graph-page .priority-home-header p:not(.eyebrow) {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  margin: 0;
+  max-width: 52rem;
+}
+
+.graph-page .eyebrow {
+  color: var(--accent);
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.graph-page .priority-grid {
+  max-width: 76rem;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.graph-page .priority-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 10.5rem;
+  padding: 0.85rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-hairline);
+  border-radius: 5px;
+}
+
+.graph-page .priority-card:hover {
+  border-color: rgba(214, 169, 40, 0.65);
+  background: #101012;
+}
+
+.graph-page .priority-card-eyebrow,
+.graph-page .priority-card-facts {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  letter-spacing: 0.03em;
+}
+
+.graph-page .priority-card h3 {
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  margin: 0.45rem 0 0.25rem;
+}
+
+.graph-page .priority-card p {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  line-height: 1.35;
+  margin: 0 0 0.5rem;
+}
+
+.graph-page .priority-card-facts {
+  margin-top: auto;
+  padding-top: 0.35rem;
+}
+
+.graph-page .priority-card-why {
+  color: var(--text-muted) !important;
+  margin-top: 0.3rem !important;
+}
+
+.graph-page .priority-card-action {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.7rem;
+  padding: 0.3rem 0.55rem;
+}
+
+.graph-page .priority-card-action:hover {
+  background: var(--accent);
+  color: var(--bg-void);
+}
+
+.graph-page .filter-panel,
+.graph-page .inspector-panel {
+  background: var(--bg-1);
+  border-right: 1px solid var(--border);
+  padding: 0.75rem;
+  overflow-y: auto;
+  font-size: 0.8rem;
+}
+
+.graph-page .inspector-panel {
+  border-right: none;
+  border-left: 1px solid var(--border);
+}
+
+.graph-page .filter-panel h2,
+.graph-page .inspector-panel h2 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-1);
+  margin: 0.75rem 0 0.5rem;
+}
+
+.graph-page .filter-panel h2:first-child {
+  margin-top: 0;
+}
+
+.graph-page .scope-badge {
+  font-size: 0.72rem;
+  color: var(--text-1);
+  white-space: nowrap;
+}
+
+.graph-page .ghost-button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.graph-page .ghost-button:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+}
+
+/* Filters */
+.graph-page .filter-group {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  margin-bottom: 0.4rem;
+  background: var(--bg-2);
+}
+
+.graph-page .filter-group > summary {
+  cursor: pointer;
+  padding: 0.4rem 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-0);
+  list-style: none;
+}
+
+.graph-page .filter-group > summary::before {
+  content: "▸ ";
+  color: var(--accent);
+}
+
+.graph-page .filter-group[open] > summary::before {
+  content: "▾ ";
+}
+
+/*
+ * A shared, unscoped `.filter-field { display: flex }` rule in
+ * src/styles/components.css (another component's filter UI) leaks into
+ * this page — author-origin CSS always beats the User-Agent stylesheet
+ * regardless of specificity, so that leaked declaration was defeating the
+ * browser's native `details:not([open]) > *` collapse and leaving every
+ * closed filter group's checkboxes fully laid out (and clickable through
+ * whatever visually sits on top of them) even while visually hidden.
+ * Restate the native behaviour explicitly, scoped to this page, so it wins
+ * on both origin and specificity.
+ */
+.graph-page .filter-group:not([open]) > *:not(summary) {
+  display: none;
+}
+
+.graph-page .filter-field {
+  padding: 0.3rem 0.5rem 0.5rem;
+}
+
+.graph-page .filter-label {
+  display: block;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.graph-page .checkbox-list {
+  max-height: 9rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.graph-page .checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.74rem;
+  color: var(--text-1);
+  cursor: pointer;
+}
+
+.graph-page .checkbox-item:hover {
+  color: var(--text-0);
+}
+
+.graph-page .range-row {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0 0.5rem 0.4rem;
+}
+
+.graph-page .range-input {
+  width: 100%;
+  min-width: 0;
+  background: var(--bg-0);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  border-radius: 3px;
+  padding: 0.25rem 0.35rem;
+  font-size: 0.74rem;
+}
+
+/* Inspector */
+.graph-page .inspector-body {
+  font-size: 0.78rem;
+}
+
+.graph-page .inspector-section {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin: 0.9rem 0 0.35rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.2rem;
+}
+
+.graph-page .inspector-note {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0.3rem 0;
+}
+
+.graph-page .inspector-more {
+  margin-top: 0.6rem;
+}
+
+.graph-page .inspector-more > summary {
+  cursor: pointer;
+  font-size: 0.72rem;
+  color: var(--accent);
+  padding: 0.3rem 0;
+  list-style: revert;
+}
+
+.graph-page .inspector-more[open] > summary {
+  margin-bottom: 0.2rem;
+}
+
+.graph-page .stat-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.15rem 0;
+  border-bottom: 1px solid rgba(51, 44, 32, 0.5);
+}
+
+.graph-page .stat-label {
+  color: var(--text-muted);
+}
+
+.graph-page .stat-value {
+  color: var(--text-0);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-page .narrative {
+  font-size: 0.75rem;
+  color: var(--text-1);
+  line-height: 1.45;
+  margin: 0.3rem 0;
+}
+
+.graph-page .related-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.graph-page .related-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  border-bottom: 1px solid rgba(51, 44, 32, 0.5);
+  color: var(--text-1);
+  font-size: 0.75rem;
+  padding: 0.2rem 0;
+  cursor: pointer;
+  text-align: left;
+}
+
+.graph-page .related-item:hover {
+  color: var(--accent);
+}
+
+.graph-page .related-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-page .related-count {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* AI panel */
+.graph-page .ai-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.graph-page .ai-controls input {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  border-radius: 4px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.75rem;
+}
+
+.graph-page .ai-controls input:focus-visible,
+.graph-page #btn-analyse:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.graph-page #btn-analyse {
+  background: var(--accent);
+  border: none;
+  color: var(--bg-0);
+  font-weight: 600;
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.graph-page #btn-analyse:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.graph-page #btn-analyse:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.graph-page .ai-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.graph-page .ai-badge {
+  background: var(--accent);
+  color: var(--bg-0);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 3px;
+  font-weight: 600;
+}
+
+.graph-page .ai-meta-text {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.graph-page .ai-block {
+  border-left: 3px solid var(--border);
+  padding: 0.4rem 0 0.4rem 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
+/* Application-computed facts read visually distinct from model prose. */
+.graph-page .ai-block.verified {
+  border-left-color: #4f9d69;
+  background: rgba(79, 157, 105, 0.07);
+}
+
+.graph-page .ai-block.interpretation {
+  border-left-color: var(--accent);
+}
+
+.graph-page .ai-block.limitations {
+  border-left-color: var(--text-muted);
+}
+
+.graph-page .ai-block-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-1);
+  margin: 0 0 0.3rem;
+}
+
+.graph-page .ai-block-source {
+  font-size: 0.66rem;
+  color: var(--text-muted);
+  font-style: italic;
+  margin: 0 0 0.35rem;
+}
+
+.graph-page .ai-list {
+  margin: 0.2rem 0;
+  padding-left: 1rem;
+  font-size: 0.75rem;
+  color: var(--text-1);
+  line-height: 1.45;
+}
+
+.graph-page .ai-list li {
+  margin-bottom: 0.25rem;
+}
+
+.graph-page .confidence {
+  display: inline-block;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.05rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  margin-right: 0.3rem;
+}
+
+.graph-page .confidence.high {
+  border-color: #4f9d69;
+  color: #7fc99a;
+}
+
+.graph-page .confidence.medium {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.graph-page .evidence-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin: 0.25rem 0 0.5rem;
+}
+
+.graph-page .evidence-chip {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  font-size: 0.66rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-page .evidence-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.graph-page .ai-error {
+  color: var(--danger);
+  font-size: 0.75rem;
+  line-height: 1.45;
+}
+
+/* Evidence table */
+.graph-page .evidence-panel {
+  height: 30vh;
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: var(--bg-1);
+}
+
+/* Collapsed by default: the full event table is heavy evidence the analyst
+   opts into, not something that should claim 30vh before it's asked for. */
+.graph-page .evidence-panel.collapsed {
+  height: auto;
+  min-height: 0;
+}
+
+.graph-page .evidence-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.graph-page .evidence-header h2 {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-1);
+  margin: 0;
+}
+
+.graph-page #event-table {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.graph-page #event-table[hidden] {
+  display: none;
+}
+
+.graph-page .table-scroll {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+}
+
+.graph-page .event-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.74rem;
+}
+
+.graph-page .event-table th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-2);
+  text-align: left;
+  padding: 0;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.graph-page .table-sort {
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-1);
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.graph-page .table-sort.sorted {
+  color: var(--accent);
+}
+
+.graph-page .event-table td {
+  padding: 0.3rem 0.5rem;
+  border-bottom: 1px solid rgba(51, 44, 32, 0.5);
+  color: var(--text-1);
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-page .event-table td.numeric {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-page .event-row {
+  cursor: pointer;
+}
+
+.graph-page .event-row:hover td,
+.graph-page .event-row:focus-visible td {
+  background: var(--bg-2);
+  color: var(--text-0);
+}
+
+.graph-page .table-pager {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
+.graph-page .table-count {
+  flex: 1;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.graph-page .table-pager button {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.graph-page .table-pager button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.graph-page .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  color: var(--text-1);
+}
+
+.graph-page .legend-swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+/* Small colour key under Organisation / Person — which shade means which role, without a full legend row per role. */
+.graph-page .legend-color-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.6rem;
+  padding: 0.1rem 0 0.4rem 1.4rem;
+  margin-top: -0.15rem;
+}
+
+.graph-page .legend-color-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+
+.graph-page .graph-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--bg-void);
+}
+
+.graph-page .graph-toolbar {
+  position: absolute;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 10;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.graph-page .graph-toolbar button {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  color: var(--text-0);
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.graph-page .graph-toolbar button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.graph-page .graph-toolbar button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.graph-page .graph-toolbar button:focus-visible,
+.graph-page .search-result:focus-visible,
+.graph-page .toolbar-toggle input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.graph-page .toolbar-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.72rem;
+  color: var(--text-1);
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+}
+
+.graph-page .graph-notices {
+  position: absolute;
+  left: 0.5rem;
+  bottom: 0.5rem;
+  z-index: 10;
+  max-width: calc(100% - 1rem);
+  background: rgba(12, 13, 15, 0.82);
+  border: none;
+  border-left: 2px solid var(--accent);
+  border-radius: 3px;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.68rem;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.graph-page .scope-summary {
+  color: var(--text-1);
+  font-size: 0.78rem;
+}
+
+.graph-page .inspector-title {
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+
+.graph-page .inspector-type {
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  margin: 0 0 0.5rem;
+}
+
+.graph-page .search-empty {
+  padding: 0.5rem 0.7rem;
+}
+
+.graph-page .graph-canvas {
+  width: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: auto;
+  background: radial-gradient(circle at 50% 38%, rgba(214, 169, 40, 0.045), transparent 58%);
+}
+
+/* Keep the compact investigation header intentional on smaller windows too;
+   the shared workbench stylesheet otherwise distributes wrapped items across
+   the full viewport height. */
+@media (max-width: 900px) {
+  .graph-page .app-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.45rem;
+  }
+
+  .graph-page .search-box,
+  .graph-page .ai-query-box {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .graph-page .app-body {
+    grid-template-columns: 210px minmax(0, 1fr);
+  }
+
+  .graph-page .inspector-panel {
+    display: none;
+  }
+
+  .graph-page .priority-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .graph-page .app-body {
+    grid-template-columns: 1fr;
+  }
+
+  .graph-page .filter-panel {
+    display: none;
+  }
+
+  .graph-page .priority-home {
+    padding: 1rem;
+  }
+
+  .graph-page .priority-home-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .graph-page .priority-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.graph-page .empty-state {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  padding: 1rem 0;
+}
+
+.graph-page .graph-back {
+  color: var(--text-1);
+  text-decoration: none;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.graph-page .graph-back:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.graph-page .legend-glyph {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+}
+
+/* ---- Priority cards + filter drawer (redesign) ---- */
+
+.graph-page .priority-cards-host {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.graph-page .priority-cards {
+  max-width: 960px;
+  width: 100%;
+}
+
+.graph-page .priority-cards-header h2 {
+  font-size: 1rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin: 0 0 0.3rem;
+}
+
+.graph-page .priority-cards-header p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.graph-page .priority-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 1.2rem;
+}
+
+.graph-page .priority-card {
+  appearance: none;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 120ms, background-color 120ms, box-shadow 120ms;
+  font-family: var(--font-sans);
+  color: inherit;
+}
+
+.graph-page .priority-card:hover:not(:disabled):not(.is-empty) {
+  border-color: var(--accent);
+  background: var(--bg-2);
+  box-shadow: 0 0 12px rgba(214, 169, 40, 0.15);
+}
+
+.graph-page .priority-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.graph-page .priority-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-0);
+  margin: 0 0 0.35rem;
+}
+
+.graph-page .priority-card-headline {
+  font-size: 0.78rem;
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  margin: 0 0 0.15rem;
+}
+
+.graph-page .priority-card-signal {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin: 0 0 0.7rem;
+}
+
+.graph-page .priority-card-why {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-style: italic;
+  line-height: 1.4;
+  margin: 0 0 0.8rem;
+}
+
+.graph-page .priority-card-cta {
+  font-size: 0.72rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.graph-page .priority-card.is-empty,
+.graph-page .priority-card[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.graph-page .priority-card.is-empty:hover,
+.graph-page .priority-card[disabled]:hover {
+  border-color: var(--border);
+  background: var(--bg-1);
+  box-shadow: none;
+}
+
+.graph-page .filter-panel:has(.filter-panel-body[hidden]) {
+  width: 80px;
+}
+
+.graph-page .filter-panel-toggle {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-1);
+  padding: 0.4rem 0.6rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: border-color 120ms, color 120ms;
+}
+
+.graph-page .filter-panel-toggle::before {
+  content: "▸ ";
+  color: var(--accent);
+  margin-right: 0.3rem;
+}
+
+.graph-page .filter-panel-toggle[aria-expanded="true"]::before {
+  content: "▾ ";
+}
+
+.graph-page .filter-panel-toggle:hover {
+  border-color: var(--accent);
+  color: var(--text-0);
+}
+
+.graph-page .filter-panel-body {
+  margin-top: 0.6rem;
+}
+
+/* Priority-first explorer shell: narrow controls, large relationship canvas,
+   and a quiet evidence/AI rail on the right. */
+.graph-page .priority-chip-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2.1rem;
+  padding: 0.35rem 0.65rem;
+  overflow-x: auto;
+  background: #080807;
+  border-bottom: 1px solid rgba(214, 169, 40, 0.22);
+  scrollbar-width: thin;
+}
+
+.graph-page .priority-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 0 auto;
+  background: #11110f;
+  border: 1px solid #2b2920;
+  border-radius: 3px;
+  color: #9d925f;
+  cursor: pointer;
+  font-size: 0.64rem;
+  padding: 0.28rem 0.45rem;
+  white-space: nowrap;
+}
+
+.graph-page .priority-chip:hover,
+.graph-page .priority-chip.active {
+  background: #2b2309;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.graph-page .priority-chip-count {
+  color: #6f673f;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.graph-page .priority-chip.active .priority-chip-count {
+  color: var(--accent);
+}
+
+.graph-page .app-body {
+  grid-template-columns: 80px minmax(0, 1fr) 310px;
+}
+
+.graph-page .filter-panel-collapsible {
+  width: 80px;
+  padding: 0.45rem;
+  background: #0a0a09;
+}
+
+.graph-page .filter-panel-collapsible .filter-panel-toggle {
+  font-size: 0.62rem;
+  padding: 0.35rem 0.25rem;
+  text-align: center;
+}
+
+.graph-page .filter-panel-collapsible .filter-panel-toggle::before {
+  display: none;
+}
+
+.graph-page .analytics-panel {
+  min-width: 0;
+  overflow-y: auto;
+  background: #0a0a09;
+  border-left: 1px solid var(--border);
+  padding: 0.65rem;
+}
+
+.graph-page .analytics-section {
+  padding: 0.65rem 0.55rem 0.75rem;
+  margin-bottom: 0.55rem;
+  background: #11110f;
+  border: 1px solid #27261f;
+  border-radius: 3px;
+}
+
+.graph-page .analytics-section h2 {
+  color: var(--accent);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  margin: 0 0 0.55rem;
+  text-transform: uppercase;
+}
+
+.graph-page .bar-chart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.graph-page .bar-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 5rem 1.2rem;
+  align-items: center;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.graph-page .bar-row:hover .bar-label,
+.graph-page .bar-row:hover .bar-count {
+  color: var(--accent);
+}
+
+.graph-page .bar-label,
+.graph-page .bar-count {
+  font-size: 0.62rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.graph-page .bar-count {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.graph-page .bar-track {
+  height: 0.28rem;
+  overflow: hidden;
+  background: #252219;
+  border-radius: 2px;
+}
+
+.graph-page .bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+}
+
+.graph-page .ai-section {
+  border-color: rgba(214, 169, 40, 0.4);
+}
+
+.graph-page .ai-section .ai-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.graph-page .ai-section #btn-analyse {
+  width: 100%;
+  background: var(--accent);
+  color: #090806;
+  border: 0;
+  border-radius: 3px;
+  padding: 0.42rem 0.55rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+}
+
+.graph-page .ai-section #btn-ai-preset-why,
+.graph-page .ai-section #btn-ai-toggle {
+  width: 100%;
+  font-size: 0.63rem;
+}
+
+.graph-page .ai-section #ai-question {
+  width: 100%;
+  background: #080807;
+  border: 1px solid #3a331c;
+  color: var(--text-primary);
+  border-radius: 3px;
+  padding: 0.4rem;
+  font-size: 0.65rem;
+}
+
+.graph-page .ai-section .ai-result {
+  margin-top: 0.55rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  font-size: 0.66rem;
+}
+
+.graph-page .floating-legend {
+  position: absolute;
+  left: 0.55rem;
+  top: 0.55rem;
+  z-index: 5;
+  width: 9rem;
+  padding: 0.5rem;
+  background: rgba(8, 8, 7, 0.88);
+  border: 1px solid #28261e;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.graph-page .floating-legend h3 {
+  color: var(--accent);
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.graph-page .floating-legend .legend-item {
+  font-size: 0.6rem;
+  padding: 0.1rem 0;
+}
+
+@media (max-width: 1050px) {
+  .graph-page .app-body {
+    grid-template-columns: 80px minmax(0, 1fr) 260px;
+  }
+}

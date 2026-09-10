@@ -1,4 +1,4 @@
-import { fetchIssueAiAnalysis, ApiError } from "../services/PatternApiClient";
+import { fetchIssueAiAnalysis, fetchIssueFollowUp, ApiError } from "../services/PatternApiClient";
 import type { AiIssueResponse } from "../types/issue";
 import { el } from "./dom";
 
@@ -14,22 +14,53 @@ function aiBlock(label: string, content: HTMLElement, sourceLabel: string): HTML
   ]);
 }
 
+function followUpComposer(onAsk: (question: string) => Promise<string>): HTMLElement {
+  const transcript = el("div", { className: "ai-follow-up__transcript" });
+  const input = el("textarea", { className: "ai-follow-up__input", rows: 2, placeholder: "Ask a follow-up about this issue…", "aria-label": "Ask a follow-up question" }) as HTMLTextAreaElement;
+  const form = el("form", { className: "ai-follow-up" }, [
+    el("div", { className: "ai-follow-up__title" }, ["Ask about this evidence"]),
+    el("div", { className: "ai-follow-up__row" }, [input, el("button", { type: "submit", className: "ai-follow-up__button" }, ["Ask"]) ]),
+    transcript,
+  ]);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.disabled = true;
+    const item = el("div", { className: "ai-follow-up__item" }, [
+      el("div", { className: "ai-follow-up__question" }, [question]),
+      el("div", { className: "ai-follow-up__answer" }, ["Analysing the verified evidence…"]),
+    ]);
+    transcript.prepend(item);
+    onAsk(question).then((answer) => {
+      item.querySelector(".ai-follow-up__answer")!.textContent = answer;
+      input.value = "";
+      input.disabled = false;
+      input.focus();
+    }).catch((error: unknown) => {
+      item.querySelector(".ai-follow-up__answer")!.textContent = error instanceof ApiError ? error.message : "The follow-up could not be answered.";
+      input.disabled = false;
+    });
+  });
+  return form;
+}
+
 /** "deepseek/deepseek-v4-flash-0731" -> "deepseek-v4-flash-0731" for display. */
 function shortModelName(model: string): string {
   const slash = model.lastIndexOf("/");
   return slash === -1 ? model : model.slice(slash + 1);
 }
 
-function renderSuccess(container: HTMLElement, response: AiIssueResponse & { status: "ok" }, onOpenEvent: (eventId: string) => void): void {
+function renderSuccess(container: HTMLElement, response: AiIssueResponse & { status: "ok" }, issueSlug: string, onOpenEvent: (eventId: string) => void): void {
   container.innerHTML = "";
   const source = shortModelName(response.model);
   const answer = el("div", { className: "ai-answer" }, [
-    aiBlock("Strongest finding", el("div", { className: "ai-answer__text" }, [response.ai.strongestFinding]), source),
-    aiBlock("Why it may matter", el("div", { className: "ai-answer__text" }, [response.ai.whyItMayMatter]), source),
-    aiBlock("Investigation hypothesis", el("div", { className: "ai-answer__text" }, [response.ai.investigationHypothesis]), source),
-    aiBlock("What would challenge this?", el("div", { className: "ai-answer__text" }, [response.ai.whatWouldDisproveThis]), source),
-    aiBlock("Supporting evidence", el("div", { className: "ai-answer__text" }, [response.ai.supportingEvidence]), source),
-    aiBlock("Evidence that weakens it", el("div", { className: "ai-answer__text" }, [response.ai.weakeningEvidence]), source),
+    aiBlock("Strongest finding", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.strongestFinding]), source),
+    aiBlock("Why it may matter", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.whyItMayMatter]), source),
+    aiBlock("Investigation hypothesis", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.investigationHypothesis]), source),
+    aiBlock("What would challenge this?", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.whatWouldDisproveThis]), source),
+    aiBlock("Supporting evidence", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.supportingEvidence]), source),
+    aiBlock("Evidence that weakens it", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.weakeningEvidence]), source),
     aiBlock(
       "Investigate next",
       el(
@@ -39,8 +70,8 @@ function renderSuccess(container: HTMLElement, response: AiIssueResponse & { sta
       ),
       source,
     ),
-    aiBlock("Suggested control direction", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl]), source),
-    aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations]), source),
+    aiBlock("Suggested control direction", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.suggestedControl]), source),
+    aiBlock("Limitations", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.limitations]), source),
     el("div", { className: "panel-subsection" }, [
       el("div", { className: "panel-subsection__title" }, ["Evidence — verified Event IDs only"]),
       el(
@@ -49,6 +80,7 @@ function renderSuccess(container: HTMLElement, response: AiIssueResponse & { sta
         response.matchingEventIds.map((eventId) => el("button", { type: "button", className: "event-id-chip", onclick: () => onOpenEvent(eventId) }, [eventId])),
       ),
     ]),
+    followUpComposer((question) => fetchIssueFollowUp(issueSlug, question).then((result) => result.answer)),
   ]);
   container.append(answer);
   if (response.cached) {
@@ -122,14 +154,17 @@ export function renderIssueAIPanel(
 
   function load(): void {
     body.innerHTML = "";
-    body.append(el("div", { className: "ai-loading" }, ["Asking the configured model to interpret this issue's evidence…"]));
+    body.append(el("div", { className: "ai-loading" }, [
+      el("div", { className: "ai-loading__title" }, ["Analysing issue evidence…"]),
+      el("div", { className: "ai-loading__detail" }, ["Comparing the strongest signals, counter-signals, enterprise baseline, and matching events."]),
+    ]));
 
     fetchIssueAiAnalysis(issueSlug)
       .then((response) => {
         providerBadge.textContent = response.provider.toUpperCase();
         providerBadge.title = `Model: ${response.model}`;
         if (response.status === "ok") {
-          renderSuccess(body, response, onOpenEvent);
+          renderSuccess(body, response, issueSlug, onOpenEvent);
         } else {
           renderFallback(body, response, load);
         }

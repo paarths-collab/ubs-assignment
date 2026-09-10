@@ -4,7 +4,10 @@ import { formatDays, formatMoney, formatPct, formatSignedDays } from "./issueFor
 
 function signalRow(signal: IssueDetailResponse["profile"]["triggeredSignals"][number]): HTMLElement {
   return el("li", { className: "signal-row" }, [
-    el("span", { className: "signal-chip signal-chip--detail" }, [signal.label]),
+    el("div", { className: "signal-card__top" }, [
+      el("span", { className: "signal-chip signal-chip--detail" }, [signal.label]),
+      el("span", { className: "signal-card__status" }, ["ACTION SIGNAL"]),
+    ]),
     el("span", { className: "signal-row__detail" }, [signal.detail]),
   ]);
 }
@@ -16,6 +19,24 @@ function comparisonRow(label: string, selected: string, enterprise: string, delt
     el("td", {}, [enterprise]),
     el("td", { style: "color:var(--accent-amber)" }, [deltaLabel]),
   ]);
+}
+
+function comparisonCards(rows: { label: string; selected: string; enterprise: string; delta: string; tone?: "positive" | "negative" | "neutral" }[]): HTMLElement {
+  return el("div", { className: "comparison-card-grid" }, rows.map((row) => el("div", { className: "comparison-card" }, [
+    el("div", { className: "comparison-card__label" }, [row.label]),
+    el("div", { className: "comparison-card__values" }, [
+      el("div", { className: "comparison-card__metric" }, [
+        el("span", { className: "comparison-card__value" }, [row.selected]),
+        el("span", { className: "comparison-card__caption" }, ["Issue"]),
+      ]),
+      el("div", { className: "comparison-card__vs" }, ["vs"]),
+      el("div", { className: "comparison-card__metric comparison-card__metric--enterprise" }, [
+        el("span", { className: "comparison-card__value" }, [row.enterprise]),
+        el("span", { className: "comparison-card__caption" }, ["Enterprise"]),
+      ]),
+    ]),
+    el("div", { className: `comparison-card__delta comparison-card__delta--${row.tone ?? "neutral"}` }, [row.delta]),
+  ])));
 }
 
 function rootCauseTable(entries: RootCauseBreakdownEntry[], strongest: RootCauseBreakdownEntry | null): HTMLElement {
@@ -145,6 +166,33 @@ export function renderIssueDetailPanel(
 
   body.append(el("div", { className: "investigation-summary" }, [detail.deterministicSummary]));
 
+  // Headline facts are deliberately prominent: these are the first numbers an
+  // analyst needs to orient themselves, and every value is deterministic.
+  body.append(
+    el("div", { className: "issue-headline-metrics" }, [
+      el("div", { className: "issue-headline-metric issue-headline-metric--blue" }, [
+        el("div", { className: "issue-headline-metric__label" }, ["Events"]),
+        el("div", { className: "issue-headline-metric__value" }, [String(profile.severity.event_count)]),
+        el("div", { className: "issue-headline-metric__sub" }, ["matching issue events"]),
+      ]),
+      el("div", { className: "issue-headline-metric issue-headline-metric--red" }, [
+        el("div", { className: "issue-headline-metric__label" }, ["High rate"]),
+        el("div", { className: "issue-headline-metric__value" }, [formatPct(profile.severity.high_rate_pct)]),
+        el("div", { className: "issue-headline-metric__sub" }, [`${profile.severity.high_count} High · ${profile.severity.high_rate_lift.toFixed(2)}× enterprise`]),
+      ]),
+      el("div", { className: "issue-headline-metric issue-headline-metric--green" }, [
+        el("div", { className: "issue-headline-metric__label" }, ["Open events"]),
+        el("div", { className: "issue-headline-metric__value" }, [String(profile.openWorkload.open_events)]),
+        el("div", { className: "issue-headline-metric__sub" }, [formatPct(profile.openWorkload.open_rate_pct), " of issue events"]),
+      ]),
+      el("div", { className: "issue-headline-metric issue-headline-metric--blue" }, [
+        el("div", { className: "issue-headline-metric__label" }, ["Potential impact"]),
+        el("div", { className: "issue-headline-metric__value issue-headline-metric__value--money" }, [formatMoney(profile.financials.potential_impact.total)]),
+        el("div", { className: "issue-headline-metric__sub" }, [`${profile.financials.potential_impact.populated_count} events with a value`]),
+      ]),
+    ]),
+  );
+
   // Why am I seeing this — the named, individually-explainable signals with triage.
   const primarySignals = profile.triggeredSignals.filter(s => s.tier === "primary");
   const secondarySignals = profile.triggeredSignals.filter(s => s.tier === "secondary");
@@ -206,45 +254,43 @@ export function renderIssueDetailPanel(
     el("details", { className: "evidence-detail" }, [
       el("summary", {}, ["Severity & enterprise comparison"]),
       el("div", { className: "evidence-detail-content" }, [
-        el("div", { className: "scroll-x" }, [
-          el("table", { className: "comparison-table" }, [
-            el("thead", {}, [
-              el("tr", {}, [el("th", {}, ["Metric"]), el("th", {}, ["Issue"]), el("th", {}, ["Enterprise"]), el("th", {}, ["Delta"])]),
+        comparisonCards([
+              {
+                label: "High-severity rate",
+                selected: formatPct(profile.severity.high_rate_pct),
+                enterprise: formatPct(profile.severity.enterprise_high_rate_pct),
+                delta: `${profile.severity.high_rate_lift.toFixed(2)}x concentration`,
+                tone: "negative",
+              },
+              {
+                label: "Open rate",
+                selected: formatPct(profile.openWorkload.open_rate_pct),
+                enterprise: formatPct(profile.openWorkload.enterprise_open_rate_pct),
+                delta: formatSignedPctPoints(profile.openWorkload.open_rate_pct - profile.openWorkload.enterprise_open_rate_pct),
+                tone: profile.openWorkload.open_rate_pct >= profile.openWorkload.enterprise_open_rate_pct ? "negative" : "positive",
+              },
+              {
+                label: "Detection delay (mean)",
+                selected: formatDays(profile.timeliness.detection_delay.mean_days),
+                enterprise: formatDays(profile.timeliness.detection_delay.enterprise_mean_days),
+                delta: formatSignedDays(profile.timeliness.detection_delay.delta_days),
+                tone: (profile.timeliness.detection_delay.delta_days ?? 0) > 0 ? "negative" : "positive",
+              },
+              {
+                label: "Recording delay (mean)",
+                selected: formatDays(profile.timeliness.recording_delay.mean_days),
+                enterprise: formatDays(profile.timeliness.recording_delay.enterprise_mean_days),
+                delta: formatSignedDays(profile.timeliness.recording_delay.delta_days),
+                tone: (profile.timeliness.recording_delay.delta_days ?? 0) > 0 ? "negative" : "positive",
+              },
+              {
+                label: "Occurrence-to-record (mean)",
+                selected: formatDays(profile.timeliness.occurrence_to_record.mean_days),
+                enterprise: formatDays(profile.timeliness.occurrence_to_record.enterprise_mean_days),
+                delta: formatSignedDays(profile.timeliness.occurrence_to_record.delta_days),
+                tone: (profile.timeliness.occurrence_to_record.delta_days ?? 0) > 0 ? "negative" : "positive",
+              },
             ]),
-            el("tbody", {}, [
-              comparisonRow(
-                "High-severity rate",
-                formatPct(profile.severity.high_rate_pct),
-                formatPct(profile.severity.enterprise_high_rate_pct),
-                `${profile.severity.high_rate_lift.toFixed(2)}x`,
-              ),
-              comparisonRow(
-                "Open rate",
-                formatPct(profile.openWorkload.open_rate_pct),
-                formatPct(profile.openWorkload.enterprise_open_rate_pct),
-                formatSignedPctPoints(profile.openWorkload.open_rate_pct - profile.openWorkload.enterprise_open_rate_pct),
-              ),
-              comparisonRow(
-                "Detection delay (mean)",
-                formatDays(profile.timeliness.detection_delay.mean_days),
-                formatDays(profile.timeliness.detection_delay.enterprise_mean_days),
-                formatSignedDays(profile.timeliness.detection_delay.delta_days),
-              ),
-              comparisonRow(
-                "Recording delay (mean)",
-                formatDays(profile.timeliness.recording_delay.mean_days),
-                formatDays(profile.timeliness.recording_delay.enterprise_mean_days),
-                formatSignedDays(profile.timeliness.recording_delay.delta_days),
-              ),
-              comparisonRow(
-                "Occurrence-to-record (mean)",
-                formatDays(profile.timeliness.occurrence_to_record.mean_days),
-                formatDays(profile.timeliness.occurrence_to_record.enterprise_mean_days),
-                formatSignedDays(profile.timeliness.occurrence_to_record.delta_days),
-              ),
-            ]),
-          ]),
-        ]),
       ]),
     ]),
   );

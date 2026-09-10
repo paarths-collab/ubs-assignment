@@ -1,11 +1,11 @@
-import { fetchAiAnalysis, ApiError } from "../services/PatternApiClient";
+import { fetchAiAnalysis, fetchPatternFollowUp, ApiError } from "../services/PatternApiClient";
 import type { AiPatternResponse, ObservedFacts } from "../types/pattern";
 import { el } from "./dom";
 
 function observedRecap(observed: ObservedFacts): HTMLElement {
   const o = observed.observed;
   return el("div", { className: "panel-subsection" }, [
-    el("div", { className: "panel-subsection__title" }, ["Observed (deterministic — not from Groq)"]),
+    el("div", { className: "panel-subsection__title" }, ["Observed (deterministic — not from the model)"]),
     el("div", { className: "ai-answer__text" }, [
       `${o.event_count} events · ${o.high_rate_pct.toFixed(1)}% High (${o.high_rate_lift.toFixed(2)}x enterprise) · ${o.open_events} open · priority ${observed.priorityLevel}.`,
     ]),
@@ -25,12 +25,48 @@ function aiBlock(label: string, content: HTMLElement, sourceLabel: string): HTML
   ]);
 }
 
+function followUpComposer(onAsk: (question: string) => Promise<string>): HTMLElement {
+  const transcript = el("div", { className: "ai-follow-up__transcript" });
+  const input = el("textarea", { className: "ai-follow-up__input", rows: 2, placeholder: "Ask a follow-up about this pattern…", "aria-label": "Ask a follow-up question" }) as HTMLTextAreaElement;
+  const form = el("form", { className: "ai-follow-up" }, [
+    el("div", { className: "ai-follow-up__title" }, ["Ask about this evidence"]),
+    el("div", { className: "ai-follow-up__row" }, [input, el("button", { type: "submit", className: "ai-follow-up__button" }, ["Ask"]) ]),
+    transcript,
+  ]);
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const question = input.value.trim();
+    if (!question) return;
+    input.disabled = true;
+    const item = el("div", { className: "ai-follow-up__item" }, [
+      el("div", { className: "ai-follow-up__question" }, [question]),
+      el("div", { className: "ai-follow-up__answer" }, ["Analysing the verified evidence…"]),
+    ]);
+    transcript.prepend(item);
+    onAsk(question).then((answer) => {
+      item.querySelector(".ai-follow-up__answer")!.textContent = answer;
+      input.value = "";
+      input.disabled = false;
+      input.focus();
+    }).catch((error: unknown) => {
+      item.querySelector(".ai-follow-up__answer")!.textContent = error instanceof ApiError ? error.message : "The follow-up could not be answered.";
+      input.disabled = false;
+    });
+  });
+  return form;
+}
+
 function renderSuccess(container: HTMLElement, response: AiPatternResponse & { status: "ok" }, onOpenEvent: (eventId: string) => void): void {
   container.innerHTML = "";
   const source = shortModelName(response.model);
   const answer = el("div", { className: "ai-answer" }, [
     observedRecap(response.observed),
-    aiBlock("Interpretation", el("div", { className: "ai-answer__text" }, [response.ai.interpretation]), source),
+    aiBlock("Strongest finding", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.strongestFinding]), source),
+    aiBlock("Why it may matter", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.whyItMayMatter]), source),
+    aiBlock("Supporting evidence", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.supportingEvidence]), source),
+    aiBlock("Interpretation", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.interpretation]), source),
+    aiBlock("Investigation hypothesis", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.investigationHypothesis]), source),
+    aiBlock("What would challenge this?", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.whatWouldDisproveThis]), source),
     aiBlock(
       "Investigate",
       el(
@@ -40,8 +76,8 @@ function renderSuccess(container: HTMLElement, response: AiPatternResponse & { s
       ),
       source,
     ),
-    aiBlock("Suggested control", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl]), source),
-    aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations]), source),
+    aiBlock("Suggested control", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.suggestedControl]), source),
+    aiBlock("Limitations", el("div", { className: "ai-answer__text ai-answer__text--detailed" }, [response.ai.limitations]), source),
     el("div", { className: "panel-subsection" }, [
       el("div", { className: "panel-subsection__title" }, ["Evidence — verified Event IDs only"]),
       el(
@@ -50,6 +86,7 @@ function renderSuccess(container: HTMLElement, response: AiPatternResponse & { s
         response.matchingEventIds.map((eventId) => el("button", { type: "button", className: "event-id-chip", onclick: () => onOpenEvent(eventId) }, [eventId])),
       ),
     ]),
+    followUpComposer((question) => fetchPatternFollowUp(response.observed.patternId, question).then((result) => result.answer)),
   ]);
   container.append(answer);
   if (response.cached) {
@@ -98,7 +135,10 @@ export function renderAIAnalystPanel(container: HTMLElement, patternId: string, 
 
   function load(): void {
     body.innerHTML = "";
-    body.append(el("div", { className: "ai-loading" }, ["Asking the configured model to interpret this pattern…"]));
+    body.append(el("div", { className: "ai-loading" }, [
+      el("div", { className: "ai-loading__title" }, ["Analysing pattern evidence…"]),
+      el("div", { className: "ai-loading__detail" }, ["Comparing verified metrics, enterprise context, and matching Event IDs."]),
+    ]));
 
     fetchAiAnalysis(patternId)
       .then((response) => {

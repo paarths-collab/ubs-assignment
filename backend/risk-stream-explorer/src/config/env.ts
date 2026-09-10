@@ -1,4 +1,18 @@
+import { loadLlmConfig, type LlmConfig } from "./llm";
+
 export interface Env {
+  /**
+   * Resolved LLM provider (key, base URL, model). This is the source of
+   * truth — see src/config/llm.ts. Providers are OpenAI-compatible, so
+   * switching between OpenRouter/Groq/OpenAI is config only.
+   */
+  llm: LlmConfig;
+  /**
+   * @deprecated Kept so existing call sites (cache keys, log fields) keep
+   * working. These now mirror `llm.apiKey` / `llm.model`, which means they
+   * hold whichever provider is configured — not necessarily Groq. Prefer
+   * `env.llm` in new code.
+   */
   GROQ_API_KEY: string;
   GROQ_MODEL: string;
   PORT: number;
@@ -8,7 +22,6 @@ export interface Env {
   NODE_ENV: string;
 }
 
-const DEFAULT_GROQ_MODEL = "openai/gpt-oss-120b";
 const DEFAULT_PORT = 3001;
 // Vite's singlefile plugin bundles the frontend into one portable HTML file
 // meant to be opened directly (double-clicked, `file://`) as well as served
@@ -36,15 +49,17 @@ function parsePositiveInt(raw: string | undefined, fallback: number, name: strin
 }
 
 /**
- * Reads and validates server configuration from `process.env`. The Groq key
- * is read here and only here — it is never logged and never echoed in any
- * response. An empty GROQ_API_KEY is tolerated at this layer (deterministic
- * routes must keep working without it); GroqService fails per-request instead.
+ * Reads and validates server configuration from `process.env`. The LLM API
+ * key is read here and only here — it is never logged and never echoed in any
+ * response. An empty key is tolerated at this layer (deterministic routes
+ * must keep working without it); the AI service fails per-request instead.
  */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
+  const llm = loadLlmConfig(source);
   return {
-    GROQ_API_KEY: source.GROQ_API_KEY ?? "",
-    GROQ_MODEL: source.GROQ_MODEL && source.GROQ_MODEL.length > 0 ? source.GROQ_MODEL : DEFAULT_GROQ_MODEL,
+    llm,
+    GROQ_API_KEY: llm.apiKey,
+    GROQ_MODEL: llm.model,
     PORT: parsePositiveInt(source.PORT, DEFAULT_PORT, "PORT"),
     CORS_ORIGIN: parseOriginList(
       source.CORS_ORIGIN && source.CORS_ORIGIN.length > 0 ? source.CORS_ORIGIN : DEFAULT_CORS_ORIGIN,

@@ -16,7 +16,29 @@ export type SignalId =
   | "OPEN_WORKLOAD"
   | "SLOW_DETECTION"
   | "SLOW_RECORDING"
-  | "LONG_EVENT_JOURNEY";
+  | "LONG_EVENT_JOURNEY"
+  | "ORG_HIGH_RATE_VARIATION";
+
+/**
+ * Counter-signals name dimensions on which this issue is *not* unusual, and
+ * therefore do not support investigating it. They exist so the workspace can
+ * argue both sides from the data rather than only presenting what looks
+ * alarming — an issue with a 7.84x root-cause concentration but enterprise-
+ * normal detection delay is a materially different case from one where both
+ * are elevated. Computed in TypeScript like every other fact; never authored
+ * by the model.
+ */
+export type CounterSignalId =
+  | "DETECTION_NEAR_BASELINE"
+  | "RECORDING_NEAR_BASELINE"
+  | "JOURNEY_NEAR_BASELINE"
+  | "OPEN_RATE_NEAR_BASELINE"
+  | "NO_MATERIAL_TREND"
+  | "NO_STRONG_ROOT_CAUSE_INTERACTION"
+  | "SEVERITY_AT_OR_BELOW_BASELINE";
+
+/** Ranks a signal's contribution so the UI can lead with the strongest few. */
+export type SignalTier = "primary" | "secondary";
 
 /** One named, individually-displayable contributor to an issue's rank score. */
 export interface TriggeredSignal {
@@ -25,6 +47,16 @@ export interface TriggeredSignal {
   /** Human-readable sentence citing the actual numbers behind this signal. */
   detail: string;
   weight: number;
+  /** Highest-weighted signal is "primary"; the rest are "secondary". */
+  tier: SignalTier;
+}
+
+/** Evidence pointing away from concern — same shape, deliberately no weight. */
+export interface CounterSignal {
+  id: CounterSignalId;
+  label: string;
+  /** Human-readable sentence citing the actual numbers behind this counter-signal. */
+  detail: string;
 }
 
 export interface IssueSeveritySummary {
@@ -143,6 +175,8 @@ export interface IssueProfile {
   matchingEventIds: string[];
   relatedPatterns: RelatedPatternRef[];
   triggeredSignals: TriggeredSignal[];
+  /** Dimensions on which this issue is NOT unusual — the case against investigating it. */
+  counterSignals: CounterSignal[];
   /** Transparent sum of triggered signals' documented weights — used only for ordering, never shown as an opaque score without its constituent signals alongside it. */
   rankScore: number;
 }
@@ -154,6 +188,14 @@ export interface IssueSummary {
   rank: number;
   rankScore: number;
   triggeredSignals: TriggeredSignal[];
+  counterSignals: CounterSignal[];
+  /**
+   * One deterministic sentence naming why this issue was selected, built from
+   * its highest-weighted signal. The card leads with this rather than with
+   * raw metrics — event count in particular is uniform across all 15 issues
+   * and so distinguishes nothing.
+   */
+  whyItSurfaced: string;
   headline: {
     event_count: number;
     high_rate_pct: number;
@@ -183,6 +225,8 @@ export interface IssueDetailResponse {
 export interface IssueEvidencePayload {
   issue: string;
   triggered_signals: Array<{ id: SignalId; label: string; detail: string }>;
+  /** Handed to the model so it can argue the case *against* investigating, not just for it. */
+  counter_signals: Array<{ id: CounterSignalId; label: string; detail: string }>;
   severity: IssueSeveritySummary;
   openWorkload: IssueOpenWorkload;
   financials: IssueFinancials;
@@ -199,13 +243,31 @@ export interface IssueEvidencePayload {
 }
 
 /** The five fields Groq is allowed to produce for an issue interpretation — everything else in the AI route response comes from already-verified deterministic facts. */
-export interface GroqIssueStructuredResult {
-  interpretation: string;
+/**
+ * What the model is asked to produce for an issue. This is synthesis, not
+ * summary: it must argue the case (`strongestFinding`, `supportingEvidence`,
+ * `investigationHypothesis`) *and* against it (`weakeningEvidence`,
+ * `whatWouldDisproveThis`), so the analyst gets a position they can test
+ * rather than a restatement of the numbers.
+ *
+ * Every field is prose. Numbers, Event IDs, organisations, people and
+ * severities are merged in server-side from the deterministic profile and are
+ * never taken from the model.
+ */
+export interface LlmIssueStructuredResult {
+  strongestFinding: string;
   whyItMayMatter: string;
+  supportingEvidence: string;
+  weakeningEvidence: string;
+  investigationHypothesis: string;
+  whatWouldDisproveThis: string;
   investigationQuestions: string[];
   suggestedControl: string;
   limitations: string;
 }
+
+/** @deprecated Provider-neutral name is `LlmIssueStructuredResult`. */
+export type GroqIssueStructuredResult = LlmIssueStructuredResult;
 
 /**
  * `provider`/`model` are returned so the UI can name the model that actually

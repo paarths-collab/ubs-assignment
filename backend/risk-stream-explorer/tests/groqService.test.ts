@@ -11,6 +11,11 @@ function completionWith(content: string) {
 }
 
 const VALID_JSON = JSON.stringify({
+  strongestFinding: "x",
+  whyItMayMatter: "x",
+  supportingEvidence: "x",
+  investigationHypothesis: "x",
+  whatWouldDisproveThis: "x",
   interpretation: "x",
   investigationQuestions: ["a", "b", "c"],
   suggestedControl: "y",

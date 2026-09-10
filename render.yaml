@@ -1,0 +1,34 @@
+# Render Blueprint — Fastify API for the Risk Stream Explorer.
+#
+# The frontend deploys separately on Vercel (see vercel.json) and calls this
+# service through VITE_API_BASE_URL. This service runs the TypeScript backend
+# directly with tsx (no compile step). The full repo is checked out, so the
+# module-relative dataset paths resolve as-is.
+#
+# After first deploy: copy this service's URL (e.g.
+# https://risk-stream-explorer-api.onrender.com) and
+#   1. set it as VITE_API_BASE_URL in the Vercel project, and
+#   2. set CORS_ORIGIN below to the Vercel origin(s).
+services:
+  - type: web
+    name: risk-stream-explorer-api
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start -w backend/risk-stream-explorer
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Required. Comma-separated Vercel origin(s) allowed to call this API,
+      # e.g. https://your-app.vercel.app  (no trailing slash).
+      - key: CORS_ORIGIN
+        sync: false
+      # LLM provider — optional. Deterministic routes work without a key;
+      # only the AI panels need one. See backend/risk-stream-explorer/.env.example.
+      - key: LLM_PROVIDER
+        value: openrouter
+      - key: LLM_MODEL
+        value: deepseek/deepseek-v4-flash-0731
+      - key: OPENROUTER_API_KEY
+        sync: false

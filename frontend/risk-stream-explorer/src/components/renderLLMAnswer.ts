@@ -1,19 +1,24 @@
 import { el } from "./dom";
 
-const KNOWN_LABELS = ["Observed", "Why it matters", "Drivers", "Investigate", "Control considerations"];
-const HEADER_RE = new RegExp(`^(${KNOWN_LABELS.join("|")}):\\s*(.*)$`);
+const KNOWN_LABELS = ["Observed", "Why it matters", "Drivers", "Investigate", "Control considerations", "Day-by-day events", "Supporting evidence"];
+const HEADER_RE = new RegExp(`^\\**(${KNOWN_LABELS.join("|")})\\**:\\s*(.*)$`);
 
 interface Section {
   label: string | null;
   lines: string[];
 }
 
+export type FollowUpHandler = (question: string, section: string) => void;
+
 function parseSections(text: string): Section[] {
   const sections: Section[] = [];
   let current: Section = { label: null, lines: [] };
 
   for (const rawLine of text.split("\n")) {
-    const line = rawLine.trimEnd();
+    // Providers sometimes add Markdown emphasis despite the plain-text
+    // contract. Strip only heading emphasis so all model content remains
+    // safely rendered as text nodes.
+    const line = rawLine.trimEnd().replace(/^\s*#{1,3}\s+/, "");
     const match = HEADER_RE.exec(line.trim());
     if (match) {
       if (current.label !== null || current.lines.some((l) => l.trim().length > 0)) {
@@ -37,7 +42,7 @@ function parseSections(text: string): Section[] {
  * convention from the system prompt and "- "/"* " bullet lines; anything
  * else falls back to plain paragraphs.
  */
-export function renderLLMAnswer(text: string): HTMLElement {
+export function renderLLMAnswer(text: string, onFollowUp?: FollowUpHandler): HTMLElement {
   const sections = parseSections(text);
   const container = el("div", { className: "ai-answer" });
 
@@ -60,6 +65,38 @@ export function renderLLMAnswer(text: string): HTMLElement {
           bulletLines.map((l) => el("li", {}, [l.replace(/^\s*[-*]\s+/, "").trim()])),
         ),
       );
+    }
+    if (section.label && onFollowUp) {
+      const toggle = el("button", { type: "button", className: "ai-followup__toggle" }, ["Ask follow-up"]);
+      const input = el("input", {
+        type: "text",
+        className: "ai-followup__input",
+        placeholder: `Ask a follow-up about ${section.label.toLowerCase()}…`,
+        maxLength: 500,
+        hidden: true,
+        "aria-label": `Follow-up question about ${section.label}`,
+      }) as HTMLInputElement;
+      const send = el("button", { type: "submit", className: "ai-followup__button", hidden: true }, ["Send"]);
+      toggle.addEventListener("click", () => {
+        toggle.hidden = true;
+        input.hidden = false;
+        send.hidden = false;
+        input.focus();
+      });
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+          input.value = "";
+          input.hidden = true;
+          send.hidden = true;
+          toggle.hidden = false;
+        }
+      });
+      const form = el("form", { className: "ai-followup", onsubmit: (event: Event) => {
+        event.preventDefault();
+        const question = input.value.trim();
+        if (question) onFollowUp(question, section.label as string);
+      } }, [toggle, input, send]);
+      blockChildren.push(form);
     }
     if (blockChildren.some(Boolean)) {
       container.append(el("div", {}, blockChildren));

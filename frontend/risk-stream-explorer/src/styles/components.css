@@ -645,8 +645,8 @@ button {
   position: fixed;
   top: 50%;
   left: 50%;
-  width: min(1180px, 94vw);
-  height: min(760px, 88vh);
+  width: min(1520px, 96vw);
+  height: min(880px, 92vh);
   transform: translate(-50%, -48%) scale(0.98);
   background: var(--bg-panel);
   border: 1px solid var(--border-strong);
@@ -725,6 +725,7 @@ button {
   overflow-y: auto;
   padding: var(--space-4);
   min-height: 0;
+  min-width: 0;
 }
 
 .drawer__col--detail {
@@ -750,11 +751,13 @@ button {
   }
 
   .drawer__body {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
     overflow-y: auto;
   }
 
   .drawer__col {
+    flex: 0 0 auto;
     overflow-y: visible;
   }
 
@@ -797,28 +800,45 @@ button {
 .detail-section__body {
   padding: var(--space-3);
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
   gap: var(--space-3);
+  align-items: start;
 }
 
 .detail-field {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 5px;
+  background: var(--bg-panel-raised);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-md);
+  padding: 10px var(--space-3);
+}
+
+/* Long-form narrative fields (background, issue detail, ...) need the full
+   width to read as paragraphs rather than being squeezed into a short box. */
+.detail-field--long {
+  grid-column: 1 / -1;
 }
 
 .detail-field__label {
   font-size: 10px;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
 }
 
 .detail-field__value {
   font-size: 13px;
   color: var(--text-primary);
   white-space: pre-line;
-  line-height: 1.5;
+  line-height: 1.55;
+  word-break: break-word;
+}
+
+.detail-field--long .detail-field__value {
+  font-size: 13.5px;
+  line-height: 1.65;
 }
 
 .detail-field__value.is-empty {
@@ -832,6 +852,7 @@ button {
   border-radius: var(--radius-md);
   background: linear-gradient(180deg, var(--accent-primary-glow), transparent 40%);
   padding: var(--space-3);
+  min-width: 0;
 }
 
 .ai-panel__header {
@@ -922,6 +943,7 @@ button {
 
 .ai-action-row {
   display: flex;
+  align-items: flex-start;
   flex-wrap: wrap;
   gap: var(--space-2);
   margin-bottom: var(--space-3);
@@ -929,10 +951,14 @@ button {
 
 .ai-action-btn {
   font-size: 11px;
+  line-height: 1.35;
   padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border-hairline);
   border-radius: 999px;
   color: var(--text-secondary);
+  max-width: 100%;
+  white-space: normal;
+  text-align: left;
   transition: border-color var(--transition-fast), color var(--transition-fast);
 }
 
@@ -951,6 +977,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+  min-width: 0;
 }
 
 .ai-answer__block-label {
@@ -965,6 +992,7 @@ button {
   font-size: 13px;
   line-height: 1.55;
   color: var(--text-primary);
+  overflow-wrap: anywhere;
 }
 
 .ai-answer__list {
@@ -973,6 +1001,58 @@ button {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.ai-followup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.ai-followup__toggle {
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary-dim);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  font-size: 11px;
+}
+
+.ai-followup__toggle:hover {
+  background: var(--accent-primary-glow);
+}
+
+.ai-followup__input {
+  min-width: 0;
+  flex: 1;
+  background: var(--bg-inset);
+  border: 1px solid var(--border-hairline);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  padding: 7px 9px;
+  font-size: 11px;
+}
+
+.ai-followup__input:focus-visible {
+  border-color: var(--accent-primary);
+  outline: none;
+}
+
+.ai-followup__button {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--accent-primary);
+  border: 1px solid var(--accent-primary-dim);
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+}
+
+.ai-followup__button:hover {
+  background: var(--accent-primary-glow);
 }
 
 .ai-answer__evidence {

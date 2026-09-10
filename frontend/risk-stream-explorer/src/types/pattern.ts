@@ -169,10 +169,22 @@ export interface ObservedFacts {
 }
 
 export interface GroqStructuredResult {
+  strongestFinding: string;
+  whyItMayMatter: string;
+  supportingEvidence: string;
+  investigationHypothesis: string;
+  whatWouldDisproveThis: string;
   interpretation: string;
   investigationQuestions: string[];
   suggestedControl: string;
   limitations: string;
+}
+
+export interface AiFollowUpResponse {
+  status: "ok";
+  answer: string;
+  provider: string;
+  model: string;
 }
 
 export type AiPatternResponse =

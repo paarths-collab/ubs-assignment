@@ -22,6 +22,11 @@ const RESPONSE_JSON_SCHEMA = {
     type: "object",
     additionalProperties: false,
     properties: {
+      strongestFinding: { type: "string" },
+      whyItMayMatter: { type: "string" },
+      supportingEvidence: { type: "string" },
+      investigationHypothesis: { type: "string" },
+      whatWouldDisproveThis: { type: "string" },
       interpretation: { type: "string" },
       investigationQuestions: {
         type: "array",
@@ -32,7 +37,7 @@ const RESPONSE_JSON_SCHEMA = {
       suggestedControl: { type: "string" },
       limitations: { type: "string" },
     },
-    required: ["interpretation", "investigationQuestions", "suggestedControl", "limitations"],
+    required: ["strongestFinding", "whyItMayMatter", "supportingEvidence", "investigationHypothesis", "whatWouldDisproveThis", "interpretation", "investigationQuestions", "suggestedControl", "limitations"],
   },
 } as const;
 
@@ -43,7 +48,12 @@ const ISSUE_RESPONSE_JSON_SCHEMA = {
     type: "object",
     additionalProperties: false,
     properties: {
+      strongestFinding: { type: "string" },
       interpretation: { type: "string" },
+      supportingEvidence: { type: "string" },
+      weakeningEvidence: { type: "string" },
+      investigationHypothesis: { type: "string" },
+      whatWouldDisproveThis: { type: "string" },
       whyItMayMatter: { type: "string" },
       investigationQuestions: {
         type: "array",
@@ -54,7 +64,18 @@ const ISSUE_RESPONSE_JSON_SCHEMA = {
       suggestedControl: { type: "string" },
       limitations: { type: "string" },
     },
-    required: ["interpretation", "whyItMayMatter", "investigationQuestions", "suggestedControl", "limitations"],
+    required: [
+      "strongestFinding",
+      "interpretation",
+      "supportingEvidence",
+      "weakeningEvidence",
+      "investigationHypothesis",
+      "whatWouldDisproveThis",
+      "whyItMayMatter",
+      "investigationQuestions",
+      "suggestedControl",
+      "limitations",
+    ],
   },
 } as const;
 
@@ -97,17 +118,31 @@ export function isRetryableGroqError(err: unknown): boolean {
  */
 export class GroqService {
   private readonly client: GroqClientLike;
+  private readonly apiKey: string;
 
   constructor(
     apiKey: string,
     private readonly model: string,
     private readonly timeoutMs: number,
+    /**
+     * Normally supplied by the composition root as the provider-agnostic
+     * client from src/config/llm.ts (OpenRouter/OpenAI/Groq all speak the
+     * same protocol). Falls back to groq-sdk only when nothing is injected.
+     */
     client?: GroqClientLike,
   ) {
+    this.apiKey = apiKey;
     this.client = client ?? (new Groq({ apiKey, maxRetries: 0 }) as unknown as GroqClientLike);
   }
 
+  private assertConfigured(): void {
+    if (!this.apiKey || /^<[^>]+>$/.test(this.apiKey.trim())) {
+      throw new Error("No usable LLM API key is configured.");
+    }
+  }
+
   async analyzePattern(factPayload: GroqFactPayload): Promise<unknown> {
+    this.assertConfigured();
     const call = () => this.callOnce(buildSystemPrompt(), factPayload, RESPONSE_JSON_SCHEMA);
     try {
       return await call();
@@ -120,6 +155,7 @@ export class GroqService {
   }
 
   async analyzeIssue(evidencePayload: IssueEvidencePayload): Promise<unknown> {
+    this.assertConfigured();
     const call = () => this.callOnce(buildIssueSystemPrompt(), evidencePayload, ISSUE_RESPONSE_JSON_SCHEMA);
     try {
       return await call();
@@ -127,6 +163,46 @@ export class GroqService {
       if (isRetryableGroqError(err)) {
         return await call();
       }
+      throw err;
+    }
+  }
+
+  /**
+   * Free-text completion for Component 2's timeline analyst, which wants
+   * prose rather than the structured JSON the pattern/issue paths need.
+   * Shares this class's client and retry policy so provider configuration
+   * stays in exactly one place.
+   */
+  async completeText(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
+    this.assertConfigured();
+    const call = async (): Promise<string> => {
+      const completion = await this.client.chat.completions.create(
+        { model: this.model, temperature: 0.2, max_tokens: 1024, messages },
+        { timeout: this.timeoutMs },
+      );
+      const content = completion.choices?.[0]?.message?.content;
+      if (!content) throw new GroqEmptyResponseError();
+      return content;
+    };
+
+    try {
+      return await call();
+    } catch (err) {
+      if (isRetryableGroqError(err)) {
+        return await call();
+      }
+      throw err;
+    }
+  }
+
+  /** Structured JSON completion for analyst features that render typed sections. */
+  async completeStructured<T>(systemPrompt: string, payload: unknown, jsonSchema: Record<string, unknown>): Promise<T> {
+    this.assertConfigured();
+    const call = () => this.callOnce(systemPrompt, payload, jsonSchema) as Promise<T>;
+    try {
+      return await call();
+    } catch (err) {
+      if (isRetryableGroqError(err)) return await call();
       throw err;
     }
   }

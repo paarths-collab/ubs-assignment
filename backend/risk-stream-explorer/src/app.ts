@@ -10,6 +10,7 @@ import rateLimit from "@fastify/rate-limit";
 import fastifyStatic from "@fastify/static";
 
 import { loadEnv, type Env } from "./config/env";
+import { createChatCompletionsClient } from "./config/llm";
 import { loadRiskDatasetFromDisk, type LoadedRiskDataset } from "./repositories/RiskDataLoader";
 import { InvestigationService } from "./services/InvestigationService";
 import { IssueIntelligenceService } from "./services/IssueIntelligenceService";
@@ -22,6 +23,10 @@ import { registerInvestigationRoutes } from "./routes/investigation.routes";
 import { registerIssueRoutes } from "./routes/issue.routes";
 import { registerEventRoutes } from "./routes/event.routes";
 import { registerAiRoutes, registerIssueAiRoutes } from "./routes/ai.routes";
+import { registerStreamgraphAiRoutes } from "./routes/streamgraph-ai.routes";
+import { loadStreamgraphRepository, StreamgraphAiService } from "./services/StreamgraphAiService";
+import { registerRelationshipAiRoutes } from "./routes/relationship-ai.routes";
+import { RelationshipAiService } from "./services/RelationshipAiService";
 
 export interface AppDependencies {
   env: Env;
@@ -31,11 +36,38 @@ export interface AppDependencies {
   aiCache: AICacheService;
   /** Tests set this false so 404s stay JSON regardless of whether dist/ exists locally. */
   serveBuiltFrontend: boolean;
+  /** Overridable so tests can supply an in-memory streamgraph dataset. */
+  streamgraphAiService: StreamgraphAiService | null;
+}
+
+/**
+ * Component 2's dataset lives in the same data dir but is loaded separately
+ * from the pattern/issue dataset. A failure here must not take the server
+ * down — the other components are independent of it.
+ */
+function createStreamgraphAiService(
+  groqService: GroqService,
+  app: FastifyInstance,
+): StreamgraphAiService | null {
+  try {
+    return new StreamgraphAiService(loadStreamgraphRepository(defaultDataDir()), groqService);
+  } catch (err) {
+    app.log.warn(
+      { error: (err as Error).message },
+      "streamgraph dataset unavailable — /api/ai/streamgraph/* will not be registered",
+    );
+    return null;
+  }
 }
 
 function defaultDataDir(): string {
   const here = path.dirname(fileURLToPath(import.meta.url));
   return path.resolve(here, "../data");
+}
+
+function graphDataDir(): string {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  return path.resolve(here, "../../../frontend/risk-stream-explorer/src/graph/data");
 }
 
 /**
@@ -85,12 +117,18 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   const env = overrides.env ?? loadEnv();
   const dataset = overrides.dataset ?? loadRiskDatasetFromDisk(defaultDataDir());
 
-  if (!env.GROQ_API_KEY) {
+  if (!env.llm.apiKey) {
     // Deterministic routes work fine without a key; only /api/ai/* degrades
     // (gracefully, to the fallback response) — so this is a warning, not a
     // startup failure.
     // eslint-disable-next-line no-console
-    console.warn("GROQ_API_KEY is not set — /api/ai/* will always return the fallback response.");
+    console.warn(
+      `No API key for LLM provider "${env.llm.provider}" — /api/ai/* will always return the fallback response. ` +
+        `Set ${env.llm.provider === "openrouter" ? "OPENROUTER_API_KEY" : env.llm.provider === "groq" ? "GROQ_API_KEY" : "OPENAI_API_KEY"} in .env`,
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.info(`LLM provider: ${env.llm.provider} · model: ${env.llm.model}`);
   }
 
   const app = Fastify({
@@ -126,7 +164,14 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   // IssueIntelligenceService's class doc for why this never recomputes per request.
   const issueIntelligenceService = new IssueIntelligenceService(dataset.eventRepository, dataset.patternRepository);
   const aiCache = overrides.aiCache ?? new AICacheService(env.AI_CACHE_TTL_MS);
-  const groqService = overrides.groqService ?? new GroqService(env.GROQ_API_KEY, env.GROQ_MODEL, env.AI_TIMEOUT_MS);
+  const groqService =
+    overrides.groqService ??
+    new GroqService(
+      env.llm.apiKey,
+      env.llm.model,
+      env.AI_TIMEOUT_MS,
+      createChatCompletionsClient(env.llm),
+    );
 
   if (builtFrontend) {
     await app.register(fastifyStatic, { root: builtFrontend.dir, index: false });
@@ -146,6 +191,28 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   registerEventRoutes(app, dataset.eventRepository);
   registerAiRoutes(app, { patternRepository: dataset.patternRepository, groqService, aiCache, env });
   registerIssueAiRoutes(app, { issueIntelligenceService, groqService, aiCache, env });
+
+  // Component 2's timeline analyst. Loaded lazily so a missing streamgraph
+  // dataset degrades to "this one route is absent" rather than failing the
+  // whole server for the components that don't need it.
+  // `in` rather than `??` so a test can pass an explicit null to disable this
+  // route group without it being treated as "not supplied".
+  const streamgraphService =
+    "streamgraphAiService" in overrides
+      ? overrides.streamgraphAiService
+      : createStreamgraphAiService(groqService, app);
+  if (streamgraphService) {
+    registerStreamgraphAiRoutes(app, streamgraphService);
+  }
+
+  // Component 3's graph data is kept in the frontend package because it is
+  // also bundled into the visualisation. The server reads the same canonical
+  // files so the model never receives client-supplied facts.
+  try {
+    registerRelationshipAiRoutes(app, new RelationshipAiService(groqService, graphDataDir()), env.llm.model);
+  } catch (err) {
+    app.log.warn({ error: (err as Error).message }, "relationship graph dataset unavailable — /api/ai/analyse will not be registered");
+  }
 
   return app;
 }
