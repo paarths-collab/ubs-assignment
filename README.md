@@ -75,6 +75,16 @@ cp backend/risk-stream-explorer/.env.example backend/risk-stream-explorer/.env
 npm run dev:server   # API on :3001
 ```
 
+Then open the frontend and navigate to **Pattern Intelligence** from the landing page (or go straight to `/patterns`).
+
+The frontend talks to the backend via `VITE_API_BASE_URL` (defaults to `http://localhost:3001`); the backend allows CORS from `CORS_ORIGIN` (defaults to `http://localhost:5173`) — keep these in sync if you change either port.
+
+### Why the AI features need a server at all
+
+All four components call the backend for live AI analysis. The OpenRouter key lives only in the backend's `.env`; it is never sent to the browser or stored in `localStorage`. The backend recomputes the verified facts from the canonical datasets, sends only those facts to the configured model, validates structured responses where applicable, and falls back safely when the provider is unavailable.
+
+The default provider is OpenRouter with `deepseek/deepseek-v4-flash`. Set `OPENROUTER_API_KEY` in `backend/risk-stream-explorer/.env` before starting the server. The model is billed by OpenRouter; it is not an OpenRouter free model.
+
 Or run the whole thing on one origin with no CORS to configure:
 
 ```bash

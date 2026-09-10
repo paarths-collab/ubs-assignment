@@ -9,7 +9,7 @@ vi.mock("../src/config/env", () => ({
   env: {
     llmProvider: "openrouter",
     OPENROUTER_API_KEY: "test-openrouter-key",
-    OPENROUTER_MODEL: "deepseek/deepseek-chat",
+    OPENROUTER_MODEL: "deepseek/deepseek-v4-flash",
     OPENROUTER_BASE_URL: "https://openrouter.test/api/v1",
     GROQ_API_KEY: undefined,
     GROQ_MODEL: "openai/gpt-oss-120b",
@@ -121,7 +121,7 @@ describe("OpenRouterClient", () => {
     expect(headers.Authorization).toBe("Bearer test-openrouter-key");
 
     const body = JSON.parse(String(init.body)) as { model: string; stream: boolean };
-    expect(body.model).toBe("deepseek/deepseek-chat");
+    expect(body.model).toBe("deepseek/deepseek-v4-flash");
     expect(body.stream).toBe(true);
   });
 
