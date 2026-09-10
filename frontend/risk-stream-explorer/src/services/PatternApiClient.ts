@@ -1,13 +1,13 @@
 import type { AiFollowUpResponse, AiPatternResponse, ApiErrorBody, Investigation, Pattern, PriorityPatternsResponse, RiskEvent } from "../types/pattern";
 import type { AiIssueResponse, IssueDetailResponse, IssuesListResponse, IssueFollowUpResponse } from "../types/issue";
+import { resolveApiBase } from "./apiBase";
 
 /**
  * Component 4 calls its own backend only — never Groq directly, and never
  * reads a Groq key from localStorage (unlike Components 1-3's
- * browser-side LLMClient). `VITE_API_BASE_URL` is a build-time public value
- * (just an origin), not a secret.
+ * browser-side LLMClient).
  */
-const API_BASE = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(/\/+$/, "") ?? "http://localhost:3001";
+const API_BASE = resolveApiBase();
 
 export class ApiError extends Error {
   constructor(

@@ -6,9 +6,11 @@ import { AppError } from "../utils/errors.js";
  * talks to it over plain `fetch` rather than pulling in another SDK.
  *
  * Note on structured output: JSON Schema support varies by the model you
- * route to, so this asks only for `json_object` and leans on the caller's
- * Zod validation to enforce the actual shape. That validation already
- * existed for the Groq path — it is the real guarantee either way.
+ * route to, so the schema is requested *and* restated in the prompt, and the
+ * caller's Zod validation still enforces the actual shape. Asking for a bare
+ * `json_object` without naming the fields is not enough — the model then
+ * returns well-formed JSON in a shape of its own invention, which fails
+ * validation and degrades the endpoint to its fallback response.
  */
 function requireKey(): string {
   const key = env.OPENROUTER_API_KEY;
@@ -38,8 +40,31 @@ export function isOpenRouterConfigured(): boolean {
   return Boolean(env.OPENROUTER_API_KEY);
 }
 
-/** Non-streaming JSON completion. Returns the raw message content for the caller to parse and validate. */
-export async function completeOpenRouterJson(systemPrompt: string, userPrompt: string): Promise<string> {
+/**
+ * Restates the required shape in the prompt. Belt-and-braces alongside the
+ * `response_format` parameter: a model that silently ignores the parameter
+ * still has the field names in front of it, which is the difference between
+ * a usable answer and a schema-validation failure.
+ */
+function withSchemaInstruction(systemPrompt: string, jsonSchema?: { name: string; schema: unknown }): string {
+  if (jsonSchema === undefined) return systemPrompt;
+  return `${systemPrompt}\n\nReturn a single JSON object matching this JSON Schema exactly. Include every required property and add no others:\n${JSON.stringify(jsonSchema.schema)}`;
+}
+
+/**
+ * Non-streaming JSON completion. Returns the raw message content for the
+ * caller to parse and validate.
+ *
+ * `jsonSchema` is the OpenAI-style JSON Schema for the expected response.
+ * It is sent as a `json_schema` response format for models that honour it,
+ * and appended to the system prompt so models that ignore the parameter
+ * still see the required field names.
+ */
+export async function completeOpenRouterJson(
+  systemPrompt: string,
+  userPrompt: string,
+  jsonSchema?: { name: string; schema: unknown },
+): Promise<string> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), env.GROQ_TIMEOUT_MS);
 
@@ -52,9 +77,12 @@ export async function completeOpenRouterJson(systemPrompt: string, userPrompt: s
       body: JSON.stringify({
         model: env.OPENROUTER_MODEL,
         temperature: 0.2,
-        response_format: { type: "json_object" },
+        response_format:
+          jsonSchema === undefined
+            ? { type: "json_object" }
+            : { type: "json_schema", json_schema: { ...jsonSchema, strict: true } },
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: withSchemaInstruction(systemPrompt, jsonSchema) },
           { role: "user", content: userPrompt },
         ],
       }),

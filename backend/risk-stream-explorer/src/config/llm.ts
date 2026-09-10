@@ -30,14 +30,14 @@ interface ProviderDefaults {
 }
 
 /**
- * Model slugs are pinned rather than floating ("...-latest") so a graded
- * build can't silently change behaviour between when it's written and when
- * it's reviewed.
+ * Model slugs avoid the floating "...-latest" aliases so a graded build
+ * can't silently change behaviour between when it's written and when it's
+ * reviewed.
  */
 const PROVIDER_DEFAULTS: Record<LlmProvider, ProviderDefaults> = {
   openrouter: {
     baseURL: "https://openrouter.ai/api/v1",
-    model: "deepseek/deepseek-v4-flash-0731",
+    model: "deepseek/deepseek-v4-flash",
     keyVar: "OPENROUTER_API_KEY",
   },
   groq: {

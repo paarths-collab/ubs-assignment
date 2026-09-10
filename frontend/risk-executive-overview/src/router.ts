@@ -15,6 +15,20 @@ function supportsPathRouting(): boolean {
   return window.location.protocol === "http:" || window.location.protocol === "https:";
 }
 
+/**
+ * The main Risk Stream Explorer app, which the deployment serves at the
+ * root while this app sits at /kpi.
+ *
+ * Returns null when there is nothing to link to: over file:// the two apps
+ * are separate single-file bundles with no shared root, and on this app's
+ * own Vite dev server the root *is* this app — a "back" link in either case
+ * would be a dead end, so the caller omits the control entirely.
+ */
+export function mainAppHref(): string | null {
+  if (!supportsPathRouting()) return null;
+  return import.meta.env.DEV ? null : "/";
+}
+
 /** Rewrites the current URL to the canonical /kpi form without a page reload. */
 export function normalizeUrl(): void {
   if (supportsPathRouting()) {

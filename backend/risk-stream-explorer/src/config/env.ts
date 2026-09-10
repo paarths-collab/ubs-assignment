@@ -29,7 +29,13 @@ const DEFAULT_PORT = 3001;
 // ports this project uses, the plain static-file preview port, and "null" —
 // the literal Origin value browsers send for a `file://` page's fetch calls.
 const DEFAULT_CORS_ORIGIN = "http://localhost:5173,http://localhost:5183,http://localhost:5187,http://localhost:5199,null";
-const DEFAULT_AI_TIMEOUT_MS = 15_000;
+/**
+ * Raised from 15s: the issue follow-up route packs a large evidence payload
+ * into its prompt and was intermittently aborting mid-call, which surfaced
+ * as a 500. Stays well inside the deployed function's 60s `maxDuration`
+ * (see vercel.json) so the platform never cuts the request first.
+ */
+const DEFAULT_AI_TIMEOUT_MS = 45_000;
 const DEFAULT_AI_CACHE_TTL_MS = 3_600_000;
 
 function parseOriginList(raw: string): string[] {

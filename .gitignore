@@ -20,3 +20,5 @@ yarn-error.log*
 !.env.example
 
 .claude/
+.vercel
+.env*

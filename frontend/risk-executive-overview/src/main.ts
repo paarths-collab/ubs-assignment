@@ -11,7 +11,7 @@ import { renderExposureImpact } from "./components/ExposureImpact";
 import { renderOrganisationTable } from "./components/OrganisationTable";
 import { renderRecurringIssues } from "./components/RecurringIssues";
 import { renderRiskBrief } from "./components/RiskBrief";
-import { normalizeUrl } from "./router";
+import { mainAppHref, normalizeUrl } from "./router";
 import { shortOrgName } from "./services/format";
 
 function monthYear(isoDate: string): string {
@@ -30,11 +30,19 @@ function renderHeader(ctx: AppContext): HTMLElement {
     subtitle.textContent = `${eventCount.toLocaleString()} synthetic risk events · ${monthYear(filters.dateFrom)}–${monthYear(filters.dateTo)} · ${scope}`;
   });
 
+  // Omitted when there is no main app to return to — see `mainAppHref`.
+  const backHref = mainAppHref();
+
   return el("header", { className: "app-header" }, [
     el("div", {}, [
       el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Executive Risk Overview"]),
       subtitle,
     ]),
+    backHref !== null &&
+      el("a", { className: "app-header__back", href: backHref }, [
+        el("span", { className: "glyph", "aria-hidden": "true" }, ["←"]),
+        "Main app",
+      ]),
   ]);
 }
 

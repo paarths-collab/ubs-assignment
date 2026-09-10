@@ -1,4 +1,5 @@
 import type { EventInsightIntent, FilterState, Granularity, PeriodInsightIntent } from "@backend/index";
+import { resolveApiBase } from "./apiBase";
 
 /**
  * Component 2 calls its own backend only — never an LLM provider directly,
@@ -9,28 +10,7 @@ import type { EventInsightIntent, FilterState, Granularity, PeriodInsightIntent 
  * The request carries only *selection* input — which period, which event,
  * which filters. The server recomputes every number in the prompt itself, so
  * a tampered client cannot feed the model invented facts.
- *
- * `VITE_API_BASE_URL` is a build-time public value (just an origin), not a
- * secret.
  */
-const DEV_API_ORIGIN = "http://localhost:3001";
-
-/**
- * Three contexts to satisfy, hence no single hardcoded default:
- *  - Vite dev server (:5187): API is on another port, so an absolute origin.
- *  - Production build served by Fastify: same-origin, so a relative path —
- *    hardcoding :3001 here would break it whenever the server runs on any
- *    other port.
- *  - Single-file build opened from disk (file://): relative can't work, so
- *    fall back to the dev origin.
- */
-function resolveApiBase(): string {
-  const configured = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-  if (configured) return configured.replace(/\/+$/, "");
-  if (import.meta.env.DEV) return DEV_API_ORIGIN;
-  return window.location.protocol === "file:" ? DEV_API_ORIGIN : "";
-}
-
 const API_BASE = resolveApiBase();
 
 export class LLMError extends Error {
