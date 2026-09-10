@@ -1,47 +1,116 @@
 # Risk Stream Explorer
 
-A synthetic, fully simulated UBS-style operational-risk workbench built as an internship take-home. No component in this repo uses real UBS data — every event, pattern, organisation and person is generated data for demonstration purposes.
+A synthetic, fully simulated UBS-style **operational-risk workbench**. Five
+surfaces over one 1,000-event synthetic dataset, each pairing a deterministic,
+fully auditable computation layer with a **grounded** LLM analyst that can only
+ever speak about server-verified facts.
 
-This is an npm workspaces monorepo:
+> No component in this repo uses real UBS data. Every event, pattern,
+> organisation and person is generated for demonstration purposes.
 
-- `frontend/risk-stream-explorer` — a Vite app, built as a single-file static HTML bundle. Serves the landing page plus Components 2-4.
-- `backend/risk-stream-explorer` — a TypeScript library (Components 2/3's data services) **and** a small Fastify HTTP server (Component 4's API).
+**→ Full documentation: [docs/](docs/README.md)**
 
-## Local development
+---
 
-Components 1-3 are a pure static frontend and need only:
+## What it answers
+
+| Page | Question | Route | Guide |
+| --- | --- | --- | --- |
+| Landing | "Where do I start?" | `/` | [docs](docs/pages/landing.md) |
+| Risk Stream | "How did risk *move over time*?" | `/streamgraph` | [docs](docs/pages/streamgraph.md) |
+| Relationship Network | "*Who and what* is connected to this risk?" | `/graph` | [docs](docs/pages/relationship-network.md) |
+| Executive Risk Overview | "Which *issues* deserve attention, and why?" | `/issues` | [docs](docs/pages/issues.md) |
+| Pattern Intelligence | "Which *statistical patterns* are worth investigating?" | `/patterns` | [docs](docs/pages/patterns.md) |
+
+Two independent timelines exist in the data — the **streamgraph dataset**
+(1,000 narrative events with rich detail + pre-generated insight text) and the
+**risk dataset** (1,000 structured risk events + 137 mined patterns). They are
+deliberately kept separate; see [the data model](docs/data-model.md).
+
+## Core principle: deterministic first, AI second
+
+Every number displayed anywhere in the UI is computed by TypeScript from the
+canonical JSON datasets. The LLM never computes, never counts, and never sees
+client-supplied "facts" — it receives a server-built evidence package and is
+allowed only to *interpret* it. If the model is unreachable, unconfigured, or
+returns something that fails validation, **the deterministic panel still
+renders in full**.
+
+```mermaid
+flowchart LR
+    D[(Canonical JSON<br/>datasets)] --> S[Deterministic<br/>services]
+    S --> UI[UI panels<br/>always render]
+    S --> EP[Server-built<br/>evidence package]
+    EP --> LLM[LLM provider]
+    LLM --> V{Schema +<br/>hallucination<br/>validation}
+    V -->|valid| AIUI[AI interpretation panel]
+    V -->|invalid ×2| FB[Deterministic fallback]
+    FB --> AIUI
+    style S fill:#1f6feb,color:#fff
+    style V fill:#b35900,color:#fff
+    style FB fill:#3d3d3d,color:#fff
+```
+
+How that is enforced — evidence packages, double validation, hallucinated-ID
+rejection, bounded retries, graceful fallback: [AI grounding](docs/ai-grounding.md).
+
+## Quick start
+
+```bash
+npm install
+```
+
+Components 1–3 are a pure static frontend and need only:
 
 ```bash
 npm run dev
 ```
 
-**Component 4 (Pattern Intelligence + Investigation Workspace + AI)** additionally needs the backend API server running, since it calls a real HTTP API rather than embedding data at build time. Run both in two terminals:
+The AI panels additionally need the backend API:
 
 ```bash
-# terminal 1 — backend API on :3001
 cp backend/risk-stream-explorer/.env.example backend/risk-stream-explorer/.env
-# fill in OPENROUTER_API_KEY in that .env (optional — without it, the AI Analyst
-# panel gracefully shows a "temporarily unavailable" fallback; every
-# deterministic panel still works)
-npm run dev:server
-
-# terminal 2 — frontend on :5173
-npm run dev
+# set OPENROUTER_API_KEY (optional — without it every deterministic panel
+# still works and the AI panels show a fallback)
+npm run dev:server   # API on :3001
 ```
 
-Then open the frontend and navigate to **Pattern Intelligence** from the landing page (or go straight to `/patterns`).
-
-The frontend talks to the backend via `VITE_API_BASE_URL` (defaults to `http://localhost:3001`); the backend allows CORS from `CORS_ORIGIN` (defaults to `http://localhost:5173`) — keep these in sync if you change either port.
-
-### Why the AI features need a server at all
-
-All four components call the backend for live AI analysis. The OpenRouter key lives only in the backend's `.env`; it is never sent to the browser or stored in `localStorage`. The backend recomputes the verified facts from the canonical datasets, sends only those facts to the configured model, validates structured responses where applicable, and falls back safely when the provider is unavailable.
-
-The default provider is OpenRouter with `deepseek/deepseek-v4-flash-0731`. Set `OPENROUTER_API_KEY` in `backend/risk-stream-explorer/.env` before starting the server. The model is billed by OpenRouter; it is not an OpenRouter free model.
-
-## Testing & typechecking
+Or run the whole thing on one origin with no CORS to configure:
 
 ```bash
-npm run typecheck
-npm test
+npm run build && npm run dev:server   # then open http://localhost:3001
 ```
+
+Full run modes, environment variables and every script: [development](docs/development.md).
+
+## Verify
+
+```bash
+npm run typecheck && npm test
+```
+
+26 test files · 200 tests. See [testing](docs/testing.md).
+
+## Repository
+
+```
+backend/risk-stream-explorer    Fastify API + the shared TypeScript library
+frontend/risk-stream-explorer   Vite app, built as a single static HTML bundle
+docs/                           architecture & reference documentation
+DEPLOY.md                       deployment walkthrough
+```
+
+Annotated tree and layering: [architecture](docs/architecture.md).
+
+## Documentation
+
+| | |
+| --- | --- |
+| [Architecture](docs/architecture.md) | System shape, data-delivery strategies, repo layout |
+| [Data model](docs/data-model.md) | Datasets, enterprise baseline, graph model |
+| [AI grounding](docs/ai-grounding.md) | How the LLM is constrained |
+| [Page guides](docs/pages/README.md) | What each of the five surfaces does |
+| [HTTP API](docs/api.md) | All 15 routes, envelopes, middleware |
+| [Frontend](docs/frontend.md) · [Backend](docs/backend.md) | Implementation detail |
+| [Development](docs/development.md) · [Testing](docs/testing.md) · [Deployment](docs/deployment.md) | Operations |
+| [Design decisions](docs/design-decisions.md) | Why it is built this way, and the non-goals |
