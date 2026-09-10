@@ -10,7 +10,9 @@ const EnvSchema = z.object({
 
   GROQ_API_KEY: z.string().min(1).optional(),
   GROQ_MODEL: z.string().default("openai/gpt-oss-120b"),
-  GROQ_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
+  // Also bounds the OpenRouter client (OpenRouterClient.ts). Kept in step
+  // with the stream-explorer backend and inside the function maxDuration.
+  GROQ_TIMEOUT_MS: z.coerce.number().int().positive().default(45000),
   GROQ_REASONING_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
 
   // OpenRouter is OpenAI-API-compatible, so it needs no extra SDK.

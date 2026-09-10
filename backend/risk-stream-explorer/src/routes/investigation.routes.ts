@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { InvestigationService } from "../services/InvestigationService";
+import type { InvestigationService } from "../services/InvestigationService.js";
 
 export function registerInvestigationRoutes(app: FastifyInstance, investigationService: InvestigationService): void {
   app.get<{ Params: { patternId: string } }>("/api/investigations/:patternId", async (request, reply) => {

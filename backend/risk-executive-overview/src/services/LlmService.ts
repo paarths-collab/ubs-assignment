@@ -43,6 +43,10 @@ Repeated owners or assignees indicate workflow concentration only. Never attribu
 
 Keep the output concise, factual and decision-oriented.
 
+The evidence object is checked against the supplied facts and the whole response is rejected if it does not match:
+- evidence.eventIds may contain only Event IDs that appear verbatim in VERIFIED_FACTS.eventIds.
+- evidence.patternId must be exactly the value of VERIFIED_FACTS.patternId. When that value is null, return null — never substitute an ID, a label, or an empty string.
+
 Return only the requested JSON structure.`;
 
 let client: Groq | null = null;
@@ -184,7 +188,10 @@ export async function generateManagerInsight(factPackage: AiFactPackage): Promis
   let rawContent: string;
 
   if (activeProvider() === "openrouter") {
-    rawContent = await completeOpenRouterJson(SYSTEM_PROMPT, `VERIFIED_FACTS:\n${JSON.stringify(factPackage)}`);
+    rawContent = await completeOpenRouterJson(SYSTEM_PROMPT, `VERIFIED_FACTS:\n${JSON.stringify(factPackage)}`, {
+      name: "manager_insight",
+      schema: MANAGER_INSIGHT_JSON_SCHEMA,
+    });
     return finaliseInsight(rawContent, factPackage, key);
   }
 

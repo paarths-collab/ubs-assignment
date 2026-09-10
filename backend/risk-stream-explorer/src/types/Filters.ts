@@ -1,4 +1,4 @@
-import type { EventType, Severity } from "./Event";
+import type { EventType, Severity } from "./Event.js";
 
 export type GroupByDimension = "riskTheme" | "severity" | "organisation" | "eventType";
 export type Granularity = "month" | "week";

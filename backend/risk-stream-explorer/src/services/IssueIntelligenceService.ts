@@ -1,6 +1,6 @@
-import type { RiskEventRepository } from "../repositories/RiskEventRepository";
-import type { PatternRepository } from "../repositories/PatternRepository";
-import type { EnterpriseBaseline, RiskEvent } from "../types/RiskEvent";
+import type { RiskEventRepository } from "../repositories/RiskEventRepository.js";
+import type { PatternRepository } from "../repositories/PatternRepository.js";
+import type { EnterpriseBaseline, RiskEvent } from "../types/RiskEvent.js";
 import type {
   CounterSignal,
   CounterSignalId,
@@ -22,16 +22,16 @@ import type {
   TimelinessMetric,
   TriggeredSignal,
   WorkflowConcentrationEntry,
-} from "../types/Issue";
+} from "../types/Issue.js";
 import {
   COUNTER_SIGNAL_LABELS,
   ISSUE_SIGNAL_THRESHOLDS as T,
   SIGNAL_LABELS,
   SIGNAL_TIE_BREAK_PRIORITY,
   SIGNAL_WEIGHTS,
-} from "../config/issueSignals";
-import { aggregateMoney, groupBy, meanNullable, medianNullable, round1, round2 } from "../utils/riskMath";
-import { slugify } from "../utils/slug";
+} from "../config/issueSignals.js";
+import { aggregateMoney, groupBy, meanNullable, medianNullable, round1, round2 } from "../utils/riskMath.js";
+import { slugify } from "../utils/slug.js";
 
 /** Shifts a "YYYY-MM" occurrence-month string by `delta` months (may be negative). */
 function shiftMonth(monthStr: string, delta: number): string {

@@ -3,8 +3,8 @@ import type {
   RawStreamEvent,
   RawStreamEventList,
   StreamEvent,
-} from "../types/Event";
-import { validateDataset, type ValidationResult } from "../validation/validateDataset";
+} from "../types/Event.js";
+import { validateDataset, type ValidationResult } from "../validation/validateDataset.js";
 
 export interface LoadedDataset {
   events: StreamEvent[];

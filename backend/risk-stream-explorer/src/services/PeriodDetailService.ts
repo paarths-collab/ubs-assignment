@@ -1,11 +1,11 @@
-import type { StreamEvent } from "../types/Event";
-import type { Period } from "../types/Timeline";
-import type { PeriodComparison } from "../types/Metrics";
-import { SEVERITY_STACK_ORDER } from "../config/constants";
-import { compareIsoDate } from "../utils/dateUtils";
-import { computePeriodMetrics } from "./MetricService";
-import { comparePeriods } from "./ComparisonService";
-import { getEventsInPeriod, getPreviousPeriod } from "./TimelineService";
+import type { StreamEvent } from "../types/Event.js";
+import type { Period } from "../types/Timeline.js";
+import type { PeriodComparison } from "../types/Metrics.js";
+import { SEVERITY_STACK_ORDER } from "../config/constants.js";
+import { compareIsoDate } from "../utils/dateUtils.js";
+import { computePeriodMetrics } from "./MetricService.js";
+import { comparePeriods } from "./ComparisonService.js";
+import { getEventsInPeriod, getPreviousPeriod } from "./TimelineService.js";
 
 export interface DayBucket {
   date: string;

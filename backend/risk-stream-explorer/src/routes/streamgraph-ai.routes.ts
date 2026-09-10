@@ -5,7 +5,7 @@ import {
   StreamgraphAiService,
   StreamgraphEventNotFoundError,
   StreamgraphPeriodNotFoundError,
-} from "../services/StreamgraphAiService";
+} from "../services/StreamgraphAiService.js";
 
 const AI_BODY_LIMIT_BYTES = 2048;
 const AI_RATE_LIMIT_MAX = 15;

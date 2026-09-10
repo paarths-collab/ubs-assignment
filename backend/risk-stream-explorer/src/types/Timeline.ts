@@ -1,4 +1,4 @@
-import type { Granularity } from "./Filters";
+import type { Granularity } from "./Filters.js";
 
 /**
  * A time bucket over which events are aggregated. `pointDate` is where the

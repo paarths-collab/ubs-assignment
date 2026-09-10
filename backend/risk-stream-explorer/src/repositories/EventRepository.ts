@@ -1,5 +1,5 @@
-import type { RawFullEventDetail, RawFullEventDetailMap, StreamEvent } from "../types/Event";
-import { compareIsoDate, getMonthBounds, getWeekBounds, parseIsoDate } from "../utils/dateUtils";
+import type { RawFullEventDetail, RawFullEventDetailMap, StreamEvent } from "../types/Event.js";
+import { compareIsoDate, getMonthBounds, getWeekBounds, parseIsoDate } from "../utils/dateUtils.js";
 
 /**
  * Owns the normalized event list and every index derived from it. Built once

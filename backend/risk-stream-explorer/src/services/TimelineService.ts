@@ -1,11 +1,11 @@
-import type { EventType, Severity, StreamEvent } from "../types/Event";
-import type { Granularity, GroupByDimension } from "../types/Filters";
-import type { Period, StreamPoint, StreamSeriesData } from "../types/Timeline";
+import type { EventType, Severity, StreamEvent } from "../types/Event.js";
+import type { Granularity, GroupByDimension } from "../types/Filters.js";
+import type { Period, StreamPoint, StreamSeriesData } from "../types/Timeline.js";
 import {
   EVENT_TYPE_STACK_ORDER,
   SEVERITY_STACK_ORDER,
   shortOrganisationName,
-} from "../config/constants";
+} from "../config/constants.js";
 import {
   addDays,
   compareIsoDate,
@@ -14,8 +14,8 @@ import {
   getMonthBounds,
   getWeekBounds,
   parseIsoDate,
-} from "../utils/dateUtils";
-import { filterByDateRange } from "./FilterService";
+} from "../utils/dateUtils.js";
+import { filterByDateRange } from "./FilterService.js";
 
 /**
  * Dynamically derives every time bucket present in the given (already

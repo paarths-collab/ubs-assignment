@@ -1,17 +1,14 @@
-/** Where the backend lives. Overridable so the built HTML can point at a deployed API. */
-// Component 3's Fastify backend defaults to :3001. Keep the override so a
-// deployed/static build can point at another API, but make the local default
-// match the actual server instead of failing with a misleading network error.
-const DEFAULT_API_BASE = "http://localhost:3001";
+import { resolveApiBase } from "../services/apiBase";
 
-declare global {
-  interface Window {
-    RISK_NETWORK_API_BASE?: string;
-  }
-}
-
+/**
+ * Where the backend lives. Shared with the other components so all four
+ * agree on one answer per context — in production that is the same origin,
+ * which is what the deployed `/api/*` gateway serves. The
+ * `window.RISK_NETWORK_API_BASE` runtime override still works for a static
+ * build pointed at a remote API; see `services/apiBase.ts`.
+ */
 export function getApiBase(): string {
-  return (window.RISK_NETWORK_API_BASE ?? DEFAULT_API_BASE).replace(/\/$/, "");
+  return resolveApiBase();
 }
 
 export interface AiObservation {

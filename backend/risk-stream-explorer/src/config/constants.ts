@@ -1,4 +1,4 @@
-import type { EventType, Severity } from "../types/Event";
+import type { EventType, Severity } from "../types/Event.js";
 
 /** Known-true facts about the shipped dataset, used by validation and regression tests. */
 export const DATASET_REGRESSION_TRUTHS = {

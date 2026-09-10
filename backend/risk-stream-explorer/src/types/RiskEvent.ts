@@ -1,4 +1,4 @@
-import type { EventType, Severity } from "./Event";
+import type { EventType, Severity } from "./Event.js";
 
 /**
  * Types for `data/risk_events_final.json` (Component 4's dataset). This is a

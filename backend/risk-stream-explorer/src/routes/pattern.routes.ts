@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import type { PatternRepository } from "../repositories/PatternRepository";
+import type { PatternRepository } from "../repositories/PatternRepository.js";
 
 export function registerPatternRoutes(app: FastifyInstance, patternRepository: PatternRepository): void {
   /** The 22-item priority queue that drives the main UI — deterministic, no AI call needed. */

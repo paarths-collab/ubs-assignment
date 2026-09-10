@@ -1,8 +1,8 @@
 import Groq from "groq-sdk";
-import { buildSystemPrompt } from "../prompts/pattern-analysis.prompt";
-import { buildIssueSystemPrompt } from "../prompts/issue-analysis.prompt";
-import type { GroqFactPayload } from "../types/Pattern";
-import type { IssueEvidencePayload } from "../types/Issue";
+import { buildSystemPrompt } from "../prompts/pattern-analysis.prompt.js";
+import { buildIssueSystemPrompt } from "../prompts/issue-analysis.prompt.js";
+import type { GroqFactPayload } from "../types/Pattern.js";
+import type { IssueEvidencePayload } from "../types/Issue.js";
 
 /** Minimal surface this service needs from a Groq client — lets tests inject a fake without touching the network. */
 export interface GroqClientLike {

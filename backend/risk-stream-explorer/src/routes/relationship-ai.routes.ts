@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { RelationshipAiService, RelationshipNodeNotFoundError } from "../services/RelationshipAiService";
+import { RelationshipAiService, RelationshipNodeNotFoundError } from "../services/RelationshipAiService.js";
 
 const bodySchema = z.object({
   selectedNodeId: z.string().max(200).nullable(),

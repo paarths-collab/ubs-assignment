@@ -1,6 +1,6 @@
-import type { RiskEventsDataset } from "../types/RiskEvent";
-import type { RiskPatternsDataset } from "../types/Pattern";
-import type { ValidationIssue, ValidationResult } from "./validateDataset";
+import type { RiskEventsDataset } from "../types/RiskEvent.js";
+import type { RiskPatternsDataset } from "../types/Pattern.js";
+import type { ValidationIssue, ValidationResult } from "./validateDataset.js";
 
 const EXPECTED_EVENT_COUNT = 1000;
 const EXPECTED_PATTERN_COUNT = 137;

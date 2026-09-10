@@ -1,7 +1,7 @@
-import type { RawFullEventDetailMap, RawStreamEvent, RawStreamEventList } from "../types/Event";
-import { EVENT_TYPE_VALUES, SEVERITY_VALUES } from "../config/constants";
-import { assertFieldRegistryComplete } from "../config/fieldRegistry";
-import { isValidIsoDate } from "../utils/dateUtils";
+import type { RawFullEventDetailMap, RawStreamEvent, RawStreamEventList } from "../types/Event.js";
+import { EVENT_TYPE_VALUES, SEVERITY_VALUES } from "../config/constants.js";
+import { assertFieldRegistryComplete } from "../config/fieldRegistry.js";
+import { isValidIsoDate } from "../utils/dateUtils.js";
 
 export interface ValidationIssue {
   severity: "error" | "warning";

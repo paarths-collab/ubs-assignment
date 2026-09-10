@@ -1,18 +1,18 @@
 import type { FastifyInstance } from "fastify";
-import type { PatternRepository } from "../repositories/PatternRepository";
-import type { GroqService } from "../services/GroqService";
-import type { AICacheService } from "../services/AICacheService";
-import type { IssueIntelligenceService } from "../services/IssueIntelligenceService";
-import { validateGroqResult, validateGroqIssueResult } from "../services/AIValidationService";
-import { buildObservedFacts } from "../services/InvestigationService";
-import { buildIssueEvidencePayload } from "../services/IssueIntelligenceService";
-import { PROMPT_VERSION } from "../prompts/pattern-analysis.prompt";
-import { buildIssueSystemPrompt, ISSUE_PROMPT_VERSION, ISSUE_RESPONSE_JSON_SCHEMA } from "../prompts/issue-analysis.prompt";
-import type { AiPatternResponse } from "../types/Investigation";
-import type { AiIssueResponse } from "../types/Issue";
-import type { IssueProfile } from "../types/Issue";
-import type { Pattern } from "../types/Pattern";
-import type { Env } from "../config/env";
+import type { PatternRepository } from "../repositories/PatternRepository.js";
+import type { GroqService } from "../services/GroqService.js";
+import type { AICacheService } from "../services/AICacheService.js";
+import type { IssueIntelligenceService } from "../services/IssueIntelligenceService.js";
+import { validateGroqResult, validateGroqIssueResult } from "../services/AIValidationService.js";
+import { buildObservedFacts } from "../services/InvestigationService.js";
+import { buildIssueEvidencePayload } from "../services/IssueIntelligenceService.js";
+import { PROMPT_VERSION } from "../prompts/pattern-analysis.prompt.js";
+import { buildIssueSystemPrompt, ISSUE_PROMPT_VERSION, ISSUE_RESPONSE_JSON_SCHEMA } from "../prompts/issue-analysis.prompt.js";
+import type { AiPatternResponse } from "../types/Investigation.js";
+import type { AiIssueResponse } from "../types/Issue.js";
+import type { IssueProfile } from "../types/Issue.js";
+import type { Pattern } from "../types/Pattern.js";
+import type { Env } from "../config/env.js";
 
 export interface AiRouteDeps {
   patternRepository: PatternRepository;

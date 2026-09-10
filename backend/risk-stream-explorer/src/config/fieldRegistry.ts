@@ -1,4 +1,4 @@
-import type { RawFullEventDetail } from "../types/Event";
+import type { RawFullEventDetail } from "../types/Event.js";
 
 export type FieldFormat =
   | "text"

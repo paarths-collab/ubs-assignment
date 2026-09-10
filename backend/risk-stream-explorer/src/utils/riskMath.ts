@@ -1,4 +1,4 @@
-import type { MoneyAggregate } from "../types/Issue";
+import type { MoneyAggregate } from "../types/Issue.js";
 
 /** Mean of the non-null values only. Returns null when nothing is populated — never 0. */
 export function meanNullable(values: Array<number | null | undefined>): number | null {

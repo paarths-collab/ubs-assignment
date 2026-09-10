@@ -6,6 +6,7 @@ export default defineConfig({
       "backend/risk-stream-explorer/tests/**/*.test.ts",
       "backend/risk-executive-overview/tests/**/*.test.ts",
       "frontend/risk-stream-explorer/tests/**/*.test.ts",
+      "api/tests/**/*.test.ts",
     ],
     environment: "node",
   },

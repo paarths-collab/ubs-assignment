@@ -4,17 +4,31 @@
   "buildCommand": "npm run build:vercel",
   "outputDirectory": "dist",
   "rewrites": [
-    { "source": "/issues", "destination": "/kpi.html" },
-    { "source": "/kpi", "destination": "/kpi.html" },
-    { "source": "/kpi/(.*)", "destination": "/kpi.html" },
-    { "source": "/((?!api/|assets/|kpi.html).*)", "destination": "/index.html" }
+    {
+      "source": "/issues",
+      "destination": "/kpi.html"
+    },
+    {
+      "source": "/kpi",
+      "destination": "/kpi.html"
+    },
+    {
+      "source": "/kpi/(.*)",
+      "destination": "/kpi.html"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "/api/handler"
+    },
+    {
+      "source": "/((?!api/|assets/|kpi.html).*)",
+      "destination": "/index.html"
+    }
   ],
   "functions": {
-    "api/[...path].ts": {
-      "includeFiles": "backend/risk-executive-overview/data/**"
-    },
-    "api/ai/[...path].ts": {
-      "includeFiles": "backend/risk-executive-overview/data/**"
+    "api/handler.ts": {
+      "includeFiles": "{backend/risk-executive-overview/data,backend/risk-stream-explorer/data,frontend/risk-stream-explorer/src/graph/data}/**",
+      "maxDuration": 60
     }
   }
 }
