@@ -1,11 +1,11 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { FastifyInstance } from "fastify";
-import { buildApp } from "../backend/risk-executive-overview/src/app";
 
 let appPromise: Promise<FastifyInstance> | undefined;
 
 function getApp(): Promise<FastifyInstance> {
   appPromise ??= (async () => {
+    const { buildApp } = await import("../backend/risk-executive-overview/src/app.js");
     const app = buildApp();
     await app.ready();
     return app;
