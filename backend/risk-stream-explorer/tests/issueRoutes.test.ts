@@ -12,9 +12,21 @@ import { slugify } from "../src/utils/slug";
 import { makePattern, makePatternsDataset, makeRiskEvent, resetRiskFixtureCounters } from "./riskFixtures";
 
 function testEnv(overrides: Partial<Env> = {}): Env {
+  // `llm` is derived from the legacy GROQ_* values so overriding either one
+  // keeps the two in sync; an explicit `llm` override still wins.
+  const GROQ_API_KEY = overrides.GROQ_API_KEY ?? "test-key";
+  const GROQ_MODEL = overrides.GROQ_MODEL ?? "test-model";
   return {
-    GROQ_API_KEY: "test-key",
-    GROQ_MODEL: "test-model",
+    GROQ_API_KEY,
+    GROQ_MODEL,
+    llm: {
+      provider: "groq",
+      apiKey: GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
+      model: GROQ_MODEL,
+      referer: "http://localhost:3001",
+      title: "test",
+    },
     PORT: 0,
     CORS_ORIGIN: ["http://localhost:5173"],
     AI_TIMEOUT_MS: 5000,
@@ -33,8 +45,12 @@ function completionWith(content: string) {
 }
 
 const VALID_ISSUE_AI_JSON = JSON.stringify({
-  interpretation: "This may indicate a workflow gap worth investigating.",
+  strongestFinding: "The strongest finding is a possible workflow gap, although the sample is limited.",
   whyItMayMatter: "The high-severity concentration signal is elevated for this issue.",
+  supportingEvidence: "The verified issue profile contains the elevated severity and workflow signals shown in the evidence package.",
+  weakeningEvidence: "The sample is small and the observed relationships do not establish causation.",
+  investigationHypothesis: "A control or ownership step may be inconsistently executed.",
+  whatWouldDisproveThis: "A review could disprove this if the underlying records show the apparent concentration is a data or classification artifact.",
   investigationQuestions: ["What changed?", "Is this one team?", "When did it start?"],
   suggestedControl: "Add independent verification.",
   limitations: "Synthetic data; small sample; correlation is not causation.",
@@ -114,7 +130,11 @@ describe("Issue routes (HTTP integration)", () => {
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.status).toBe("ok");
-    expect(body.ai.interpretation).toBe("This may indicate a workflow gap worth investigating.");
+    expect(body.ai.strongestFinding).toBeTruthy();
+    expect(body.ai.supportingEvidence).toBeTruthy();
+    expect(body.ai.weakeningEvidence).toBeTruthy();
+    expect(body.ai.investigationHypothesis).toBeTruthy();
+    expect(body.ai.whatWouldDisproveThis).toBeTruthy();
     expect(body.ai.whyItMayMatter).toBeTruthy();
     expect(body.matchingEventIds.sort()).toEqual(events.map((e) => e.event_id).sort());
     expect(create).toHaveBeenCalledTimes(1);
@@ -147,8 +167,12 @@ describe("Issue routes (HTTP integration)", () => {
 
   it("POST /api/ai/issue/:issueId rejects a hallucinated Event ID and falls back after regeneration", async () => {
     const hallucinated = JSON.stringify({
-      interpretation: "See SIM-9999999 for detail.",
+      strongestFinding: "See SIM-9999999 for detail.",
       whyItMayMatter: "x",
+      supportingEvidence: "x",
+      weakeningEvidence: "x",
+      investigationHypothesis: "x",
+      whatWouldDisproveThis: "x",
       investigationQuestions: ["a", "b", "c"],
       suggestedControl: "x",
       limitations: "y",
