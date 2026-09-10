@@ -225,6 +225,47 @@
   color: var(--text-muted);
 }
 
+/* ---------- AI Investigation Brief bar ---------- */
+.ai-brief-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--bg-inset);
+  border: 1px solid var(--border-hairline);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+
+.ai-brief-bar__label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.ai-brief-bar__button {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border: 1px solid var(--accent-amber);
+  background: transparent;
+  color: var(--accent-amber);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.ai-brief-bar__button:hover {
+  background: var(--accent-amber);
+  color: var(--bg-base);
+}
+
 /* ---------- AI Analyst panel ---------- */
 .ai-source-tag {
   font-size: 9px;
@@ -377,6 +418,18 @@
   line-height: 1.4;
 }
 
+.issue-card__why {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.issue-card__supporting-line {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
 .issue-card__signals {
   display: flex;
   flex-wrap: wrap;
@@ -454,6 +507,31 @@
   margin-top: var(--space-3);
 }
 
+.signal-tier {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.signal-tier + .signal-tier {
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border-hairline);
+}
+
+.signal-tier__label {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.signal-tier--counter .signal-tier__label--counter {
+  color: var(--text-muted);
+}
+
 .signal-list {
   list-style: none;
   margin: 0;
@@ -470,10 +548,20 @@
   flex-wrap: wrap;
 }
 
+.signal-row--counter {
+  opacity: 0.8;
+}
+
 .signal-row__detail {
   font-size: 12px;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+.signal-chip--counter {
+  color: var(--text-muted);
+  border-color: var(--border-strong);
+  background: var(--bg-inset);
 }
 
 .panel-subsection__subtitle {
@@ -545,4 +633,51 @@
   font-family: var(--font-mono);
   font-size: 11px;
   color: var(--text-muted);
+}
+
+/* ---------- Evidence sections — collapsible details ---------- */
+.evidence-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.evidence-detail {
+  padding: 0;
+  border: none;
+  border-top: 1px solid var(--border-hairline);
+  border-radius: 0;
+}
+
+.evidence-detail:first-child {
+  border-top: none;
+}
+
+.evidence-detail summary {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: var(--space-2) 0;
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition-fast);
+}
+
+.evidence-detail summary:hover {
+  color: var(--text-secondary);
+}
+
+.evidence-detail summary::marker {
+  color: var(--text-muted);
+}
+
+.evidence-detail-content {
+  padding: var(--space-2) 0 var(--space-3) 0;
+}
+
+.evidence-detail[open] summary {
+  color: var(--text-primary);
 }

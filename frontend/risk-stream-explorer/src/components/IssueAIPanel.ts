@@ -24,10 +24,14 @@ function renderSuccess(container: HTMLElement, response: AiIssueResponse & { sta
   container.innerHTML = "";
   const source = shortModelName(response.model);
   const answer = el("div", { className: "ai-answer" }, [
-    aiBlock("Interpretation", el("div", { className: "ai-answer__text" }, [response.ai.interpretation]), source),
+    aiBlock("Strongest finding", el("div", { className: "ai-answer__text" }, [response.ai.strongestFinding]), source),
     aiBlock("Why it may matter", el("div", { className: "ai-answer__text" }, [response.ai.whyItMayMatter]), source),
+    aiBlock("Investigation hypothesis", el("div", { className: "ai-answer__text" }, [response.ai.investigationHypothesis]), source),
+    aiBlock("What would challenge this?", el("div", { className: "ai-answer__text" }, [response.ai.whatWouldDisproveThis]), source),
+    aiBlock("Supporting evidence", el("div", { className: "ai-answer__text" }, [response.ai.supportingEvidence]), source),
+    aiBlock("Evidence that weakens it", el("div", { className: "ai-answer__text" }, [response.ai.weakeningEvidence]), source),
     aiBlock(
-      "Investigate",
+      "Investigate next",
       el(
         "ul",
         { className: "ai-answer__list" },
@@ -35,7 +39,7 @@ function renderSuccess(container: HTMLElement, response: AiIssueResponse & { sta
       ),
       source,
     ),
-    aiBlock("Suggested control", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl]), source),
+    aiBlock("Suggested control direction", el("div", { className: "ai-answer__text" }, [response.ai.suggestedControl]), source),
     aiBlock("Limitations", el("div", { className: "ai-answer__text" }, [response.ai.limitations]), source),
     el("div", { className: "panel-subsection" }, [
       el("div", { className: "panel-subsection__title" }, ["Evidence — verified Event IDs only"]),
@@ -140,7 +144,7 @@ export function renderIssueAIPanel(
     run(): void {
       container.hidden = false;
       // Re-showing an answer already fetched shouldn't spend another request;
-      // only the first run (or an explicit retry) calls Groq.
+      // only the first run (or an explicit retry) calls the configured model.
       if (started) return;
       started = true;
       load();

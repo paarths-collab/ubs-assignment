@@ -27,35 +27,21 @@ function issueCard(summary: IssueSummary, isSelected: boolean, onSelect: (slug: 
         el("span", { className: "issue-card__score" }, [`${summary.rankScore} signal${summary.rankScore === 1 ? "" : "s"}`]),
       ]),
       el("div", { className: "issue-card__title" }, [summary.issue]),
-      summary.triggeredSignals.length > 0
-        ? el(
-            "div",
-            { className: "issue-card__signals" },
-            summary.triggeredSignals.map(signalChip),
-          )
-        : el("div", { className: "issue-card__no-signal" }, ["No signals cleared threshold — included for completeness, not flagged for attention."]),
-      el("div", { className: "issue-card__stats" }, [
-        el("div", { className: "issue-card__stat" }, [
-          el("span", { className: "issue-card__stat-value", style: "color:var(--accent-red)" }, [
-            `${formatPct(summary.headline.high_rate_pct)} (${summary.headline.high_rate_lift.toFixed(2)}x)`,
-          ]),
-          el("span", { className: "issue-card__stat-label" }, ["High rate vs enterprise"]),
-        ]),
-        el("div", { className: "issue-card__stat" }, [
-          el("span", { className: "issue-card__stat-value" }, [formatMoney(summary.headline.potential_impact)]),
-          el("span", { className: "issue-card__stat-label" }, ["Potential impact"]),
-        ]),
-        el("div", { className: "issue-card__stat" }, [
-          el("span", { className: "issue-card__stat-value" }, [String(summary.headline.open_events)]),
-          el("span", { className: "issue-card__stat-label" }, ["Open events"]),
-        ]),
+      summary.whyItSurfaced
+        ? el("div", { className: "issue-card__why" }, [summary.whyItSurfaced])
+        : null,
+      el("div", { className: "issue-card__supporting-line" }, [
+        ...(summary.counterSignals && summary.counterSignals.length > 0 ? [summary.counterSignals[0]?.label, " · "] : []),
+        String(summary.headline.open_events),
+        " open · ",
+        formatMoney(summary.headline.potential_impact),
       ]),
       combo
         ? el("div", { className: "issue-card__combo" }, [
-            el("span", { className: "issue-card__combo-label" }, ["Strongest root-cause combination: "]),
-            `${combo.root_cause} (${combo.event_count} events, ${combo.high_count} High, ${combo.high_rate_lift.toFixed(2)}x)`,
+            el("span", { className: "issue-card__combo-label" }, ["Root-cause interaction: "]),
+            `${combo.root_cause} — ${combo.high_rate_lift.toFixed(2)}x High concentration`,
           ])
-        : el("div", { className: "issue-card__combo issue-card__combo--none" }, ["No root-cause combination clears the minimum support threshold."]),
+        : null,
     ],
   );
 }
