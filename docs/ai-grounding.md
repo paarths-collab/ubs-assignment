@@ -94,6 +94,8 @@ House rules baked into every prompt: synthetic data, correlation ≠ causation,
 repeated people/orgs are described as **workflow concentration, never blame**,
 and "insufficient evidence" is an acceptable answer.
 
+
+The full text of every prompt — system prompts and follow-up templates, one section per page — lives in [prompts.md](prompts.md).
 ---
 
 [← Docs index](README.md) · [Project README](../README.md)

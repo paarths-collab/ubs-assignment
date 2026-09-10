@@ -12,6 +12,7 @@ Architecture and reference docs for the Risk Stream Explorer. Start with
 | [Repository layout](repository-layout.md) | Annotated tree of both workspaces |
 | [Data model](data-model.md) | The 5 canonical datasets, enterprise baseline, the 8-node / 12-relation graph model |
 | [AI grounding](ai-grounding.md) | How the LLM is constrained: evidence packages, double validation, hallucination rejection, fallbacks, provider abstraction, prompt contract |
+| [Prompts](prompts.md) | The full text of every system and follow-up prompt sent to the LLM, one section per page |
 
 ## The pages
 

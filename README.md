@@ -109,6 +109,7 @@ Annotated tree and layering: [architecture](docs/architecture.md).
 | [Architecture](docs/architecture.md) | System shape, data-delivery strategies, repo layout |
 | [Data model](docs/data-model.md) | Datasets, enterprise baseline, graph model |
 | [AI grounding](docs/ai-grounding.md) | How the LLM is constrained |
+| [Prompts](docs/prompts.md) | Every prompt sent to the LLM, per page |
 | [Page guides](docs/pages/README.md) | What each of the five surfaces does |
 | [HTTP API](docs/api.md) | All 15 routes, envelopes, middleware |
 | [Frontend](docs/frontend.md) · [Backend](docs/backend.md) | Implementation detail |
