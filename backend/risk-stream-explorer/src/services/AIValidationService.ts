@@ -13,8 +13,12 @@ const GroqStructuredResultSchema = z.object({
 });
 
 const GroqIssueStructuredResultSchema = z.object({
-  interpretation: z.string().trim().min(1),
+  strongestFinding: z.string().trim().min(1),
   whyItMayMatter: z.string().trim().min(1),
+  supportingEvidence: z.string().trim().min(1),
+  weakeningEvidence: z.string().trim().min(1),
+  investigationHypothesis: z.string().trim().min(1),
+  whatWouldDisproveThis: z.string().trim().min(1),
   investigationQuestions: z.array(z.string().trim().min(1)).min(MIN_QUESTIONS).max(MAX_QUESTIONS),
   suggestedControl: z.string().trim().min(1),
   limitations: z.string().trim().min(1),
@@ -63,7 +67,14 @@ export function validateGroqResult(raw: unknown, allowedEventIds: readonly strin
   return { valid: true, result: parsed.data };
 }
 
-/** Same guardrails as `validateGroqResult`, for the 5-field issue-analysis schema (adds `whyItMayMatter`) and an issue's own `matching_event_ids`. */
+/**
+ * Same guardrails as `validateGroqResult`, for the 9-field issue-analysis
+ * schema (`LlmIssueStructuredResult` — synthesis, not summary: the model
+ * must argue both for the evidence, via `strongestFinding` /
+ * `supportingEvidence` / `investigationHypothesis`, and against it, via
+ * `weakeningEvidence` / `whatWouldDisproveThis`) and an issue's own
+ * `matching_event_ids`.
+ */
 export function validateGroqIssueResult(raw: unknown, allowedEventIds: readonly string[]): AIIssueValidationOutcome {
   const parsed = GroqIssueStructuredResultSchema.safeParse(raw);
   if (!parsed.success) {
@@ -72,8 +83,12 @@ export function validateGroqIssueResult(raw: unknown, allowedEventIds: readonly 
 
   const allowed = new Set(allowedEventIds);
   const combinedText = [
-    parsed.data.interpretation,
+    parsed.data.strongestFinding,
     parsed.data.whyItMayMatter,
+    parsed.data.supportingEvidence,
+    parsed.data.weakeningEvidence,
+    parsed.data.investigationHypothesis,
+    parsed.data.whatWouldDisproveThis,
     ...parsed.data.investigationQuestions,
     parsed.data.suggestedControl,
     parsed.data.limitations,

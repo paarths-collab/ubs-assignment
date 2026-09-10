@@ -7,7 +7,7 @@ import { validateGroqResult, validateGroqIssueResult } from "../services/AIValid
 import { buildObservedFacts } from "../services/InvestigationService";
 import { buildIssueEvidencePayload } from "../services/IssueIntelligenceService";
 import { PROMPT_VERSION } from "../prompts/pattern-analysis.prompt";
-import { ISSUE_PROMPT_VERSION } from "../prompts/issue-analysis.prompt";
+import { buildIssueSystemPrompt, ISSUE_PROMPT_VERSION, ISSUE_RESPONSE_JSON_SCHEMA } from "../prompts/issue-analysis.prompt";
 import type { AiPatternResponse } from "../types/Investigation";
 import type { AiIssueResponse } from "../types/Issue";
 import type { Env } from "../config/env";
@@ -183,7 +183,12 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
       for (let attempt = 1; attempt <= MAX_VALIDATION_ATTEMPTS; attempt += 1) {
         const startedAt = Date.now();
         try {
-          const raw = await deps.groqService.analyzeIssue(evidence);
+          // Routed through the generic `completeStructured` rather than
+          // `GroqService.analyzeIssue` — that method is pinned to the old
+          // 5-field schema on a class this feature does not own. The
+          // provider-neutral prompt/schema for the 9-field synthesis result
+          // live next to each other in issue-analysis.prompt.ts.
+          const raw = await deps.groqService.completeStructured<unknown>(buildIssueSystemPrompt(), evidence, ISSUE_RESPONSE_JSON_SCHEMA);
           const latencyMs = Date.now() - startedAt;
           const outcome = validateGroqIssueResult(raw, matchingEventIds);
 
