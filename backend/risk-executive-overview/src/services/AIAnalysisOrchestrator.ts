@@ -1,4 +1,3 @@
-import type { RiskDossier } from "../types/Dossier";
 import { streamCompletion } from "./LlmService";
 
 /**
@@ -131,7 +130,49 @@ What distinguishes it — the combination of measures that makes this issue diff
 Management implication — what the comparison changes about how much attention this deserves relative to the other issues.`,
 };
 
-function buildUserPrompt(section: AnalysisSection, dossier: RiskDossier): string {
+/**
+ * Persistent, context-aware analysis of whatever the manager is currently
+ * looking at — the filtered portfolio view, not one selected issue. These
+ * three lenses answer the questions a manager actually opens the dashboard
+ * with, and are grounded in the same PortfolioDossier regardless of which
+ * one is picked.
+ */
+export const PORTFOLIO_ANALYSIS_SECTIONS = {
+  analyse: {
+    id: "portfolio-analyse",
+    title: "Analyse This View",
+    reasoningEffort: "medium",
+    prompt: `Question: What should a senior manager understand about the current filtered risk population?
+
+The dossier covers exactly the population currently selected — respect any organisation, date, event-type or severity filter already applied rather than treating it as the whole enterprise.
+
+Cover: overall scale and severity mix, whether the period-over-period trend (kpiTrend, comparing the earlier half of the filtered window to the more recent half) is improving or worsening, where exposure and potential impact concentrate, and which one or two issues in topScenarios matter most right now.
+
+Close with a single sentence a manager could repeat in a meeting.`,
+  },
+  unusual: {
+    id: "portfolio-unusual",
+    title: "What Is Unusual?",
+    reasoningEffort: "medium",
+    prompt: `Question: What stands out about this filtered view compared to what would be an unremarkable baseline?
+
+Use kpiTrend to identify what has moved between the earlier and more recent half of the filtered window, and use composition/attention to identify concentration that would not be expected if risk were evenly spread. Do not simply restate the largest numbers — a large total is only unusual if it is disproportionate to the population it sits in.
+
+If nothing in the data clears a genuine threshold of surprise, say so plainly rather than manufacturing significance.`,
+  },
+  investigate: {
+    id: "portfolio-investigate",
+    title: "What Should Management Investigate?",
+    reasoningEffort: "medium",
+    prompt: `Question: Given this filtered view, what should management actually look into next?
+
+Turn the attention cards and topScenarios into specific, prioritised questions and control checks — name the issues and organisations involved rather than speaking generically. Distinguish what needs investigation now from what merely needs monitoring.`,
+  },
+} as const satisfies Record<string, AnalysisSection>;
+
+export type PortfolioLens = keyof typeof PORTFOLIO_ANALYSIS_SECTIONS;
+
+function buildUserPrompt<T>(section: AnalysisSection, dossier: T): string {
   return `${section.prompt}
 
 VERIFIED_FACTS:
@@ -139,13 +180,15 @@ ${JSON.stringify(dossier)}`;
 }
 
 /**
- * Runs one analysis section against the dossier. Every section receives the
- * same verified dossier and never the prose of a previous section, so one
- * mistaken interpretation cannot propagate down the chain.
+ * Runs one analysis section against a verified dossier. Every section
+ * receives the same dossier and never the prose of a previous section, so
+ * one mistaken interpretation cannot propagate down a chain. Generic over
+ * the dossier shape so the same function grounds both the per-issue
+ * RiskDossier and the whole-view PortfolioDossier.
  */
-export function runAnalysisSection(
+export function runAnalysisSection<T>(
   section: AnalysisSection,
-  dossier: RiskDossier,
+  dossier: T,
   onDelta: (text: string) => void,
 ): Promise<string> {
   return streamCompletion(

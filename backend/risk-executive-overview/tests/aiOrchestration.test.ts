@@ -14,7 +14,9 @@ import { buildScenarioSignals, rankScenarioSignals } from "../src/services/Scena
 import { normalizeFilters, filterEvents } from "../src/services/FilterService";
 import type { RiskEvent } from "../src/types/RiskEvent";
 import type { RiskDossier } from "../src/types/Dossier";
-import { makeEvent, makeConfig, resetCounter } from "./fixtures";
+import {makeEvent, makeConfig, resetCounter, makeFilters} from "./fixtures";
+
+const defaultFilters = makeFilters();
 
 let mockStreamCreateFn = vi.fn();
 let mockCreateFn = vi.fn();
@@ -224,7 +226,7 @@ describe("AI Orchestration - buildEnterpriseComparison", () => {
     const patterns = repo.getPatterns();
 
     // Get the real scenarios
-    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config, defaultFilters));
     expect(scenarios.length).toBeGreaterThan(1);
 
     const selected = scenarios[0]!;
@@ -242,7 +244,7 @@ describe("AI Orchestration - buildEnterpriseComparison", () => {
     const allEvents = repo.getEvents();
     const patterns = repo.getPatterns();
 
-    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const comparison = buildEnterpriseComparison(selected, scenarios);
 
@@ -257,7 +259,7 @@ describe("AI Orchestration - buildEnterpriseComparison", () => {
     const events = [makeEvent({ eventType: "Non-Financial", grossAmountUsd: null, netAmountUsd: null })];
     const patterns = [{ patternId: "test", patternType: "issue" as const, eventIds: [], group: { issueDetail: "Test" } }];
 
-    const scenarios = buildScenarioSignals(events, patterns, config);
+    const scenarios = buildScenarioSignals(events, patterns, config, defaultFilters);
     expect(scenarios.length).toBeGreaterThan(0);
 
     const selected = scenarios[0]!;
@@ -276,7 +278,7 @@ describe("AI Orchestration - buildEnterpriseComparison", () => {
     const allEvents = repo.getEvents();
     const patterns = repo.getPatterns();
 
-    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const comparison = buildEnterpriseComparison(selected, scenarios);
 
@@ -307,7 +309,7 @@ describe("AI Orchestration - buildRiskDossier", () => {
     ];
 
     const patterns = [{ patternId: "test", patternType: "issue" as const, eventIds: [], group: { issueDetail: issue } }];
-    const scenarios = rankScenarioSignals(buildScenarioSignals(events, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(events, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const filters = normalizeFilters(
       { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -335,7 +337,7 @@ describe("AI Orchestration - buildRiskDossier", () => {
     ];
 
     const patterns = [{ patternId: "test", patternType: "issue" as const, eventIds: [], group: { issueDetail: issue } }];
-    const scenarios = rankScenarioSignals(buildScenarioSignals(events, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(events, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const filters = normalizeFilters(
       { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -358,7 +360,7 @@ describe("AI Orchestration - buildRiskDossier", () => {
     const allEvents = repo.getEvents();
     const patterns = repo.getPatterns();
 
-    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const filters = normalizeFilters(
       { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -379,7 +381,7 @@ describe("AI Orchestration - buildRiskDossier", () => {
     const allEvents = repo.getEvents();
     const patterns = repo.getPatterns();
 
-    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const filters = normalizeFilters(
       { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -459,7 +461,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
     const allEvents = repo.getEvents();
     const patterns = repo.getPatterns();
 
-    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(allEvents, patterns, config, defaultFilters));
     const selected = scenarios[0]!;
     const filters = normalizeFilters(
       { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -514,8 +516,8 @@ describe("AI Orchestration - Prompts & Sections", () => {
     const repo = new RiskRepository();
     const allEvents = repo.getEvents();
     const dossier = buildRiskDossier(
-      (buildScenarioSignals(allEvents, repo.getPatterns(), config)[0])!,
-      buildScenarioSignals(allEvents, repo.getPatterns(), config),
+      (buildScenarioSignals(allEvents, repo.getPatterns(), config, defaultFilters)[0])!,
+      buildScenarioSignals(allEvents, repo.getPatterns(), config, defaultFilters),
       allEvents.slice(0, 10),
       normalizeFilters(
         { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -548,8 +550,8 @@ describe("AI Orchestration - Prompts & Sections", () => {
     const config = makeConfig();
     const repo = new RiskRepository();
     const dossier = buildRiskDossier(
-      (buildScenarioSignals(repo.getEvents(), repo.getPatterns(), config)[0])!,
-      buildScenarioSignals(repo.getEvents(), repo.getPatterns(), config),
+      (buildScenarioSignals(repo.getEvents(), repo.getPatterns(), config, defaultFilters)[0])!,
+      buildScenarioSignals(repo.getEvents(), repo.getPatterns(), config, defaultFilters),
       repo.getEvents().slice(0, 10),
       normalizeFilters(
         { dateFrom: "2024-01-01", dateTo: "2026-12-31", organisation: "Enterprise-wide", eventType: "All", severity: "All" },
@@ -592,7 +594,7 @@ describe("AI Orchestration - SSE Routes", () => {
     app = buildApp({ repository });
     // Get a real issue detail from the dataset
     const config = repository.getConfig();
-    const scenarios = rankScenarioSignals(buildScenarioSignals(repository.getEvents(), repository.getPatterns(), config));
+    const scenarios = rankScenarioSignals(buildScenarioSignals(repository.getEvents(), repository.getPatterns(), config, defaultFilters));
     firstIssueDetail = scenarios[0]?.issueDetail || "Test Issue";
   });
 

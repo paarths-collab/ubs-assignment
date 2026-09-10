@@ -2,6 +2,7 @@ import type { AppContext } from "../state/AppContext";
 import type { BreakdownRow, ScenarioSignal } from "../types";
 import { el } from "./dom";
 import { renderAIAnalysisPanel } from "./AIAnalysisPanel";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 import { formatUsd, formatPercent, shortOrgName } from "../services/format";
 
 const money = (value: number | null): string => (value == null ? "Not applicable" : formatUsd(value));
@@ -25,17 +26,32 @@ function field(label: string, value: string): HTMLElement {
  * `stacked` lays children out in a column rather than the field grid — used
  * where a section mixes fields with a table, since nesting the field grid
  * inside itself stretches every tile to the table's height.
+ *
+ * `collapsedSummary` renders the section as a closed `<details>` with that
+ * text standing in for the full content — for the long owner table and the
+ * Event ID list, which are real audit material but shouldn't dominate a
+ * senior manager's first read of the brief.
  */
 function briefSection(
   title: string,
   children: HTMLElement[],
-  options: { note?: string; stacked?: boolean } = {},
+  options: { note?: string; stacked?: boolean; collapsedSummary?: string } = {},
 ): HTMLElement {
-  return el("section", { className: "brief-section" }, [
-    el("h4", { className: "brief-section__title" }, [title]),
-    options.note ? el("p", { className: "brief-section__note" }, [options.note]) : null,
-    el("div", { className: options.stacked ? "brief-section__stack" : "brief-section__body" }, children),
-  ]);
+  const note = options.note ? el("p", { className: "brief-section__note" }, [options.note]) : null;
+  const body = el("div", { className: options.stacked ? "brief-section__stack" : "brief-section__body" }, children);
+
+  if (options.collapsedSummary) {
+    return el("details", { className: "brief-section brief-section--collapsible" }, [
+      el("summary", { className: "brief-section__summary" }, [
+        el("span", { className: "brief-section__title" }, [title]),
+        el("span", { className: "brief-section__summary-text" }, [options.collapsedSummary]),
+      ]),
+      note,
+      body,
+    ]);
+  }
+
+  return el("section", { className: "brief-section" }, [el("h4", { className: "brief-section__title" }, [title]), note, body]);
 }
 
 function miniTable(rows: BreakdownRow[], keyHeader: string, shorten = false, limit = 6): HTMLElement {
@@ -140,7 +156,13 @@ function renderBriefBody(signal: ScenarioSignal): HTMLElement {
         ]),
         miniTable(a.owners, "Owner"),
       ],
-      { stacked: true, note: "Workflow concentration — not individual fault attribution." },
+      {
+        stacked: true,
+        note: "Workflow concentration — not individual fault attribution.",
+        collapsedSummary: `${a.recurrence.ownerCount} owners involved${
+          repeatedCount(a.owners) > 0 ? `; ${repeatedCount(a.owners)} have repeat occurrences` : ""
+        }`,
+      },
     ),
 
     briefSection("Root cause", [miniTable(a.rootCauses, "Root cause")], { stacked: true }),
@@ -157,7 +179,7 @@ function renderBriefBody(signal: ScenarioSignal): HTMLElement {
           ),
         ]),
       ],
-      { stacked: true },
+      { stacked: true, collapsedSummary: `View ${signal.eventIds.length} events →` },
     ),
 
     el("p", { className: "brief-interpretation" }, [a.recurrence.interpretation]),
@@ -167,6 +189,11 @@ function renderBriefBody(signal: ScenarioSignal): HTMLElement {
 export function renderRiskBrief(ctx: AppContext, host: HTMLElement): void {
   const analysisHost = el("div", {});
   renderAIAnalysisPanel(ctx, analysisHost);
+  const followUp = renderFollowUpPanel(ctx, "risk-brief", () => {
+    const scenario = ctx.getSelectedScenario();
+    if (!scenario) return undefined;
+    return scenario.patternId ? { type: "pattern", patternId: scenario.patternId } : { type: "issue", issueDetail: scenario.issueDetail };
+  });
   let lastRenderedId: string | null = null;
 
   function sync(): void {
@@ -183,7 +210,9 @@ export function renderRiskBrief(ctx: AppContext, host: HTMLElement): void {
     if (scenario.scenarioId === lastRenderedId) return;
     lastRenderedId = scenario.scenarioId;
 
-    host.replaceChildren(renderBriefBody(scenario), analysisHost);
+    // AI analysis leads the brief — a manager should see the interpretation
+    // before the supporting tables, not after scrolling past all of them.
+    host.replaceChildren(analysisHost, followUp, renderBriefBody(scenario));
   }
 
   ctx.subscribe(sync);

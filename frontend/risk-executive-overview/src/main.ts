@@ -4,6 +4,7 @@ import { AppContext } from "./state/AppContext";
 import { el } from "./components/dom";
 import { renderFilterBar } from "./components/FilterBar";
 import { renderKpiGrid } from "./components/KpiGrid";
+import { renderPortfolioAnalysisPanel } from "./components/PortfolioAnalysisPanel";
 import { renderAttentionCards } from "./components/AttentionCards";
 import { renderRiskComposition } from "./components/RiskComposition";
 import { renderExposureImpact } from "./components/ExposureImpact";
@@ -73,6 +74,7 @@ function boot(): void {
 
   const hosts = {
     kpi: el("div", {}),
+    portfolioAi: el("div", {}),
     attention: el("div", {}),
     composition: el("div", {}),
     exposure: el("div", {}),
@@ -83,6 +85,7 @@ function boot(): void {
 
   main.append(
     section("Current Risk Picture", "The filtered population at a glance", hosts.kpi),
+    section("AI Analysis", "Reacts to whatever your filters currently show", hosts.portfolioAi),
     section("What Needs Attention", "Why should I care?", hosts.attention),
     section("Risk Composition", "What is this population made of?", hosts.composition),
     section("Exposure & Impact", "Realised money, potential money, operational burden", hosts.exposure),
@@ -92,6 +95,7 @@ function boot(): void {
   );
 
   renderKpiGrid(ctx, hosts.kpi);
+  renderPortfolioAnalysisPanel(ctx, hosts.portfolioAi);
   renderAttentionCards(ctx, hosts.attention);
   renderRiskComposition(ctx, hosts.composition);
   renderExposureImpact(ctx, hosts.exposure);

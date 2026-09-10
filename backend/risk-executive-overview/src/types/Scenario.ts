@@ -1,6 +1,7 @@
 import type { RecurrenceFacts } from "../services/RecurrenceService";
 import type { DelayStats } from "../utils/statistics";
 import type { ReasonCode } from "./Priority";
+import type { TrendFacts } from "./Dossier";
 
 export type SignalLevel = "normal" | "elevated" | "critical";
 
@@ -106,5 +107,7 @@ export interface ScenarioSignal {
   reasonCodes: ReasonCode[];
 
   analytics: ScenarioAnalytics;
+  /** First half vs second half of the filtered window, for the Emerging Risk lens. Null when the window can't be split (e.g. a single-day filter). */
+  trend: TrendFacts | null;
   eventIds: string[];
 }

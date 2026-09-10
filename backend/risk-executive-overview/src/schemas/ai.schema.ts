@@ -7,6 +7,19 @@ export const ManagerInsightRequestSchema = z.object({
   selection: RiskDetailSelectionSchema,
 });
 
+/** The persistent, context-aware panel: no selection, just whatever the manager's filters currently show. */
+export const PortfolioAnalysisRequestSchema = z.object({
+  filters: FilterInputSchema.default({}),
+  lens: z.enum(["analyse", "unusual", "investigate"]),
+});
+
+export const FollowUpRequestSchema = z.object({
+  filters: FilterInputSchema.default({}),
+  context: z.enum(["kpi", "ai-analysis", "attention", "composition", "exposure", "organisations", "issues", "risk-brief"]),
+  question: z.string().trim().min(1).max(1000),
+  selection: RiskDetailSelectionSchema.optional(),
+});
+
 /**
  * The exact structure the model must return. Kept as the single source of
  * truth: also used to derive the JSON Schema sent to Groq's structured

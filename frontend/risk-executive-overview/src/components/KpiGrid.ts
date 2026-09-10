@@ -1,7 +1,8 @@
 import type { AppContext } from "../state/AppContext";
 import type { OverviewResponse } from "../types";
 import { el } from "./dom";
-import { formatKpi, formatPercent } from "../services/format";
+import { formatKpi, formatKpiDelta, formatPercent } from "../services/format";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 
 /**
  * The eight headline KPIs. Each carries one supporting line giving the
@@ -39,16 +40,31 @@ function supportingLine(key: string, overview: OverviewResponse): string {
   }
 }
 
-const KPI_DEFS: Array<{ key: keyof OverviewResponse["kpis"]; label: string; accent?: string }> = [
-  { key: "totalEvents", label: "Total Events" },
-  { key: "highSeverityEvents", label: "High Severity", accent: "accent-red" },
-  { key: "openBacklog", label: "Open Backlog", accent: "accent-amber" },
-  { key: "grossExposure", label: "Gross Exposure" },
-  { key: "netExposure", label: "Net Exposure" },
-  { key: "recoveryRate", label: "Recovery Rate", accent: "accent-green" },
-  { key: "potentialImpact", label: "Potential Impact" },
-  { key: "remediationHours", label: "Remediation Effort" },
+/**
+ * Whether a rising value is good, bad, or simply descriptive. "up" is not
+ * uniformly bad on this dashboard — a rising Recovery Rate is the one KPI
+ * where more is better, and a rising Total Events is just volume, not a
+ * verdict — so the delta colour is derived per-KPI, not from direction alone.
+ */
+type Polarity = "higherIsBad" | "higherIsGood" | "neutral";
+
+const KPI_DEFS: Array<{ key: keyof OverviewResponse["kpis"]; label: string; accent?: string; polarity: Polarity }> = [
+  { key: "totalEvents", label: "Total Events", polarity: "neutral" },
+  { key: "highSeverityEvents", label: "High Severity", accent: "accent-red", polarity: "higherIsBad" },
+  { key: "openBacklog", label: "Open Backlog", accent: "accent-amber", polarity: "higherIsBad" },
+  { key: "grossExposure", label: "Gross Exposure", polarity: "higherIsBad" },
+  { key: "netExposure", label: "Net Exposure", polarity: "higherIsBad" },
+  { key: "recoveryRate", label: "Recovery Rate", accent: "accent-green", polarity: "higherIsGood" },
+  { key: "potentialImpact", label: "Potential Impact", polarity: "higherIsBad" },
+  { key: "remediationHours", label: "Remediation Effort", polarity: "higherIsBad" },
 ];
+
+function deltaTone(polarity: Polarity, direction: "up" | "down" | "flat"): "good" | "bad" | "neutral" {
+  if (direction === "flat" || polarity === "neutral") return "neutral";
+  const isRise = direction === "up";
+  if (polarity === "higherIsBad") return isRise ? "bad" : "good";
+  return isRise ? "good" : "bad";
+}
 
 /** The events behind a headline figure, shown inline rather than in a modal. */
 function renderKpiDetail(ctx: AppContext): HTMLElement | null {
@@ -98,13 +114,16 @@ function renderKpiDetail(ctx: AppContext): HTMLElement | null {
 }
 
 export function renderKpiGrid(ctx: AppContext, host: HTMLElement): void {
+  const followUp = renderFollowUpPanel(ctx, "kpi");
+
   function sync(): void {
     const { overview, loading } = ctx.getState();
 
     if (!overview) {
-      host.replaceChildren(el("div", { className: loading ? "loading-state" : "empty-state" }, [
-        loading ? "Loading KPIs…" : "No KPI data yet.",
-      ]));
+      host.replaceChildren(
+        el("div", { className: loading ? "loading-state" : "empty-state" }, [loading ? "Loading KPIs…" : "No KPI data yet."]),
+        followUp,
+      );
       return;
     }
 
@@ -114,6 +133,7 @@ export function renderKpiGrid(ctx: AppContext, host: HTMLElement): void {
       const kpi = overview.kpis[def.key];
       const isEmpty = !kpi.applicable || kpi.value == null;
       const isSelected = selectedKpiId === def.key;
+      const delta = overview.kpiTrend?.[def.key];
 
       return el(
         "button",
@@ -132,6 +152,11 @@ export function renderKpiGrid(ctx: AppContext, host: HTMLElement): void {
           el("div", { className: "metric-card__sub" }, [
             isEmpty ? "structurally not applicable to this selection" : supportingLine(def.key, overview),
           ]),
+          !isEmpty && delta
+            ? el("div", { className: `metric-card__delta metric-card__delta--${deltaTone(def.polarity, delta.direction)}` }, [
+                formatKpiDelta(kpi.unit, delta),
+              ])
+            : null,
         ],
       );
     });
@@ -139,6 +164,7 @@ export function renderKpiGrid(ctx: AppContext, host: HTMLElement): void {
     const detail = renderKpiDetail(ctx);
     const children: HTMLElement[] = [el("div", { className: "metric-grid" }, cards)];
     if (detail) children.push(detail);
+    children.push(followUp);
     host.replaceChildren(...children);
   }
 

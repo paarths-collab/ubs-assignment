@@ -1,6 +1,8 @@
 import type { RiskEvent } from "../types/RiskEvent";
 import type { RiskConfig } from "../types/Config";
 import type { RiskPattern } from "../types/Pattern";
+import type { NormalizedFilters } from "../schemas/filters.schema";
+import type { TrendFacts } from "../types/Dossier";
 import type {
   BreakdownRow,
   DimensionRating,
@@ -12,6 +14,7 @@ import { deriveScenarioTitle } from "../config/scenarioTitles";
 import { buildBreakdown } from "./Breakdown";
 import { computeFinancialFacts } from "./FinancialFacts";
 import { computeRecurrenceFacts } from "./RecurrenceService";
+import { computeTrend } from "./DossierService";
 import { deriveReasonCodes } from "./PriorityService";
 import { PRIORITY_THRESHOLDS } from "./PriorityThresholds";
 import { countWhere, groupCounts, sumValid, uniqueValues } from "../utils/aggregation";
@@ -198,6 +201,7 @@ export function buildScenarioSignals(
   filteredEvents: readonly RiskEvent[],
   patterns: readonly RiskPattern[],
   config: RiskConfig,
+  filters: NormalizedFilters,
 ): ScenarioSignal[] {
   const excludedStatuses = new Set(config.businessRules.openBacklog.excludedStatuses);
   const overallFinancial = computeFinancialFacts(filteredEvents);
@@ -260,12 +264,13 @@ export function buildScenarioSignals(
       dimensions: buildDimensions(analytics),
       reasonCodes,
       analytics,
+      trend: computeTrend(events, filters, excludedStatuses),
       eventIds: events.map((event) => event.eventId),
     };
   });
 }
 
-export type AttentionLens = "urgency" | "exposure" | "recurrence";
+export type AttentionLens = "urgency" | "exposure" | "recurrence" | "emerging";
 
 export interface AttentionCard {
   lens: AttentionLens;
@@ -323,6 +328,43 @@ export function buildAttentionCards(scenarios: ScenarioSignal[]): AttentionCard[
         recurrence.analytics.recurrence.organisationCount > 1
           ? "Repeats across several owners and assignees."
           : "Concentrated within a single business unit's workflow.",
+    },
+    ...buildEmergingCard(scenarios),
+  ];
+}
+
+/**
+ * The scenario growing fastest between the first and second half of the
+ * filtered window, ranked on High-severity growth first since a rising
+ * backlog of routine events matters far less than a rising backlog of
+ * serious ones. Omitted entirely when nothing is actually trending up —
+ * a manufactured "emerging" pick out of noise would be worse than none.
+ */
+function buildEmergingCard(scenarios: ScenarioSignal[]): AttentionCard[] {
+  const rising = scenarios.filter((s) => s.trend != null && s.trend.direction === "increasing");
+  if (rising.length === 0) return [];
+
+  const emerging = [...rising].sort(
+    (a, b) =>
+      (b.trend!.highSeverityChange - a.trend!.highSeverityChange) ||
+      (b.trend!.eventCountChange - a.trend!.eventCountChange) ||
+      a.scenarioId.localeCompare(b.scenarioId),
+  )[0] as ScenarioSignal;
+
+  const trend = emerging.trend!;
+  const pctText =
+    trend.eventCountChangePct != null ? `, ${Math.round(trend.eventCountChangePct * 100)}% more events` : "";
+
+  return [
+    {
+      lens: "emerging",
+      scenarioId: emerging.scenarioId,
+      title: emerging.title,
+      headline: `${trend.firstPeriod.eventCount} → ${trend.secondPeriod.eventCount} events${pctText}`,
+      reason:
+        trend.highSeverityChange > 0
+          ? `High-severity events rose from ${trend.firstPeriod.highSeverityCount} to ${trend.secondPeriod.highSeverityCount} across the filtered window.`
+          : "Event volume is rising faster than any other issue in the filtered window.",
     },
   ];
 }

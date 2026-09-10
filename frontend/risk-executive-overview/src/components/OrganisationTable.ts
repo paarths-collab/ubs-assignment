@@ -1,16 +1,18 @@
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { formatUsd, shortOrgName } from "../services/format";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 
 const INITIAL_ROWS = 5;
 
 export function renderOrganisationTable(ctx: AppContext, host: HTMLElement): void {
   let showAll = false;
+  const followUp = renderFollowUpPanel(ctx, "organisations");
 
   function sync(): void {
     const { overview } = ctx.getState();
     if (!overview) {
-      host.replaceChildren(el("div", { className: "empty-state" }, ["No organisation data yet."]));
+      host.replaceChildren(el("div", { className: "empty-state" }, ["No organisation data yet."]), followUp);
       return;
     }
 
@@ -66,7 +68,7 @@ export function renderOrganisationTable(ctx: AppContext, host: HTMLElement): voi
       );
     }
 
-    host.replaceChildren(el("div", { className: "org-table-wrap" }, children));
+    host.replaceChildren(el("div", { className: "org-table-wrap" }, children), followUp);
   }
 
   ctx.subscribe(sync);

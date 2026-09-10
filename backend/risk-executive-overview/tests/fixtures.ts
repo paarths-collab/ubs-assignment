@@ -117,3 +117,14 @@ export function makeConfig(overrides: Partial<RiskConfig> = {}): RiskConfig {
     ...overrides,
   };
 }
+
+export function makeFilters(overrides: Partial<import("../src/schemas/filters.schema").NormalizedFilters> = {}) {
+  return {
+    organisation: "Enterprise-wide",
+    dateFrom: "2024-09-01",
+    dateTo: "2026-08-31",
+    eventType: "All" as const,
+    severity: "All" as const,
+    ...overrides,
+  };
+}

@@ -81,11 +81,23 @@ export interface ExposureBlock {
   operational: { totalRemediationHours: number; averagePerEvent: number; maxPerEvent: number };
 }
 
+export type KpiDeltaDirection = "up" | "down" | "flat";
+
+export interface KpiDelta {
+  deltaValue: number;
+  deltaPct: number | null;
+  direction: KpiDeltaDirection;
+}
+
+/** Earlier half vs more recent half of the filtered date range — the only period comparison this dataset supports, since it has no data before 2024-09-01. Absent (or a missing key) when a KPI cannot be compared for that half. */
+export type KpiDeltas = Partial<Record<keyof KpiSet, KpiDelta>>;
+
 export interface OverviewResponse {
   filters: NormalizedFilters;
   eventCount: number;
   datasetEventCount: number;
   kpis: KpiSet;
+  kpiTrend: KpiDeltas | null;
   distributions: Distributions;
   composition: CompositionBlock;
   exposure: ExposureBlock;
@@ -236,10 +248,21 @@ export interface ScenarioSignal {
   reasonCodes: ReasonCode[];
 
   analytics: ScenarioAnalytics;
+  trend: TrendFacts | null;
   eventIds: string[];
 }
 
-export type AttentionLens = "urgency" | "exposure" | "recurrence";
+/** Earlier half vs more recent half of the filtered window — same convention as KpiDeltas, applied per scenario. */
+export interface TrendFacts {
+  firstPeriod: { from: string; to: string; eventCount: number; highSeverityCount: number; openEventCount: number };
+  secondPeriod: { from: string; to: string; eventCount: number; highSeverityCount: number; openEventCount: number };
+  eventCountChange: number;
+  eventCountChangePct: number | null;
+  highSeverityChange: number;
+  direction: "increasing" | "decreasing" | "stable";
+}
+
+export type AttentionLens = "urgency" | "exposure" | "recurrence" | "emerging";
 
 export interface AttentionCard {
   lens: AttentionLens;

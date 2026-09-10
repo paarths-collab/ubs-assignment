@@ -1,6 +1,7 @@
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { formatUsd, formatPercent } from "../services/format";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 
 const money = (value: number | null): string => (value == null ? "Not applicable" : formatUsd(value));
 
@@ -20,10 +21,12 @@ function column(title: string, caption: string, lines: HTMLElement[]): HTMLEleme
 }
 
 export function renderExposureImpact(ctx: AppContext, host: HTMLElement): void {
+  const followUp = renderFollowUpPanel(ctx, "exposure");
+
   function sync(): void {
     const { overview } = ctx.getState();
     if (!overview) {
-      host.replaceChildren(el("div", { className: "empty-state" }, ["No exposure data yet."]));
+      host.replaceChildren(el("div", { className: "empty-state" }, ["No exposure data yet."]), followUp);
       return;
     }
 
@@ -61,6 +64,7 @@ export function renderExposureImpact(ctx: AppContext, host: HTMLElement): void {
           line("Maximum per event", `${operational.maxPerEvent} hrs`),
         ]),
       ]),
+      followUp,
     );
   }
 

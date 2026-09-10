@@ -1,4 +1,4 @@
-import type { KpiValue } from "../types";
+import type { KpiValue, KpiDelta, KpiUnit } from "../types";
 
 export function formatUsd(value: number): string {
   const abs = Math.abs(value);
@@ -25,6 +25,26 @@ export function formatKpi(kpi: KpiValue): string {
     default:
       return kpi.value.toLocaleString();
   }
+}
+
+/**
+ * Formats a KPI's earlier-half-vs-recent-half delta. A ratio (Recovery Rate)
+ * is shown in percentage points, since "+2.0%" on a rate that's itself a
+ * percentage reads as ambiguous — percentage of what?
+ */
+export function formatKpiDelta(unit: KpiUnit, delta: KpiDelta): string {
+  const sign = delta.deltaValue > 0 ? "+" : delta.deltaValue < 0 ? "−" : "";
+  const abs = Math.abs(delta.deltaValue);
+
+  if (unit === "ratio") {
+    return `${sign}${(abs * 100).toFixed(1)}pp vs earlier period`;
+  }
+
+  const valueText =
+    unit === "USD" ? formatUsd(abs) : unit === "hours" ? `${Math.round(abs).toLocaleString()}h` : Math.round(abs).toLocaleString();
+  const pctText = delta.deltaPct != null ? ` (${sign}${Math.abs(delta.deltaPct * 100).toFixed(1)}%)` : "";
+
+  return `${sign}${valueText}${pctText} vs earlier period`;
 }
 
 export function shortOrgName(organisation: string): string {

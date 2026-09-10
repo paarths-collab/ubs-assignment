@@ -3,7 +3,9 @@ import { buildComposition, buildExposureSummary } from "../src/services/Composit
 import { buildScenarioSignals, buildAttentionCards } from "../src/services/ScenarioService";
 import { RiskRepository } from "../src/repositories/RiskRepository";
 import type { RiskPattern } from "../src/types/Pattern";
-import { makeEvent, makeConfig, resetCounter } from "./fixtures";
+import {makeEvent, makeConfig, resetCounter, makeFilters} from "./fixtures";
+
+const defaultFilters = makeFilters();
 
 function pattern(overrides: Partial<RiskPattern> = {}): RiskPattern {
   return {
@@ -268,7 +270,7 @@ describe("CompositionService - buildAttentionCards", () => {
     ];
     const config = makeConfig();
 
-    const scenarios = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const scenarios = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
     const cards = buildAttentionCards(scenarios);
 
     expect(cards).toHaveLength(3);
@@ -293,7 +295,7 @@ describe("CompositionService - buildAttentionCards", () => {
     const scenarios = buildScenarioSignals(events, [
       pattern({ group: { issueDetail: issue1 } }),
       pattern({ group: { issueDetail: issue2 } }),
-    ], config);
+    ], config, defaultFilters);
     const cards = buildAttentionCards(scenarios);
 
     const urgencyCard = cards.find((c) => c.lens === "urgency")!;
@@ -316,7 +318,7 @@ describe("CompositionService - buildAttentionCards", () => {
     const scenarios = buildScenarioSignals(events, [
       pattern({ group: { issueDetail: issue1 } }),
       pattern({ group: { issueDetail: issue2 } }),
-    ], config);
+    ], config, defaultFilters);
     const cards = buildAttentionCards(scenarios);
 
     const urgencyCard = cards.find((c) => c.lens === "urgency")!;
@@ -337,7 +339,7 @@ describe("CompositionService - buildAttentionCards", () => {
     ];
     const config = makeConfig();
 
-    const scenarios = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const scenarios = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
     const cards = buildAttentionCards(scenarios);
 
     for (const card of cards) {
@@ -363,7 +365,7 @@ describe("CompositionService - buildAttentionCards", () => {
     ];
     const config = makeConfig();
 
-    const scenarios = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const scenarios = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
     const cards = buildAttentionCards(scenarios);
 
     expect(cards).toHaveLength(3);
@@ -384,7 +386,7 @@ describe("CompositionService - buildAttentionCards", () => {
     const scenarios = buildScenarioSignals(events, [
       pattern({ group: { issueDetail: issue1 } }),
       pattern({ group: { issueDetail: issue2 } }),
-    ], config);
+    ], config, defaultFilters);
     const cards = buildAttentionCards(scenarios);
 
     const exposureCard = cards.find((c) => c.lens === "exposure")!;

@@ -1,6 +1,7 @@
 import type { AppContext } from "../state/AppContext";
 import { el } from "./dom";
 import { formatUsd, shortOrgName } from "../services/format";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 
 function countRow(label: string, value: number, total: number, tone = ""): HTMLElement {
   const share = total === 0 ? 0 : value / total;
@@ -21,10 +22,12 @@ function block(title: string, rows: HTMLElement[]): HTMLElement {
 }
 
 export function renderRiskComposition(ctx: AppContext, host: HTMLElement): void {
+  const followUp = renderFollowUpPanel(ctx, "composition");
+
   function sync(): void {
     const { overview } = ctx.getState();
     if (!overview) {
-      host.replaceChildren(el("div", { className: "empty-state" }, ["No composition data yet."]));
+      host.replaceChildren(el("div", { className: "empty-state" }, ["No composition data yet."]), followUp);
       return;
     }
 
@@ -73,6 +76,7 @@ export function renderRiskComposition(ctx: AppContext, host: HTMLElement): void 
           ),
         ),
       ]),
+      followUp,
     );
   }
 

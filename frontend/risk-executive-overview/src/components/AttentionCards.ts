@@ -1,11 +1,13 @@
 import type { AppContext } from "../state/AppContext";
 import type { AttentionLens } from "../types";
 import { el } from "./dom";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 
 const LENS_META: Record<AttentionLens, { title: string; question: string; action: string }> = {
   urgency: { title: "Urgency", question: "What is most pressing?", action: "Review issue" },
   exposure: { title: "Exposure", question: "Where is the money?", action: "Review exposure" },
   recurrence: { title: "Recurrence", question: "What keeps coming back?", action: "Review recurrence" },
+  emerging: { title: "Emerging", question: "What's getting worse?", action: "Review trend" },
 };
 
 /**
@@ -14,6 +16,8 @@ const LENS_META: Record<AttentionLens, { title: string; question: string; action
  * different scenarios.
  */
 export function renderAttentionCards(ctx: AppContext, host: HTMLElement): void {
+  const followUp = renderFollowUpPanel(ctx, "attention");
+
   function sync(): void {
     const { priority, loading } = ctx.getState();
 
@@ -22,6 +26,7 @@ export function renderAttentionCards(ctx: AppContext, host: HTMLElement): void {
         el("div", { className: loading ? "loading-state" : "empty-state" }, [
           loading ? "Assessing priorities…" : "No scenarios in the current selection.",
         ]),
+        followUp,
       );
       return;
     }
@@ -51,7 +56,7 @@ export function renderAttentionCards(ctx: AppContext, host: HTMLElement): void {
       ]);
     });
 
-    host.replaceChildren(el("div", { className: "attention-grid" }, cards));
+    host.replaceChildren(el("div", { className: "attention-grid" }, cards), followUp);
   }
 
   ctx.subscribe(sync);

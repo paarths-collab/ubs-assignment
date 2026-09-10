@@ -1,6 +1,8 @@
 import type { FilterInput, RiskDetailSelection } from "../types";
 
 export type AnalysisEndpoint = "deep-analysis" | "investigation-plan" | "enterprise-comparison";
+export type PortfolioLens = "analyse" | "unusual" | "investigate";
+export type FollowUpContext = "kpi" | "ai-analysis" | "attention" | "composition" | "exposure" | "organisations" | "issues" | "risk-brief";
 
 export interface StreamHandlers {
   onStart: (info: { title: string; eventCount: number; organisationCount: number; sections: Array<{ id: string; title: string }> }) => void;
@@ -14,23 +16,19 @@ export interface StreamHandlers {
 /**
  * Consumes the backend's SSE analysis stream.
  *
- * `EventSource` is GET-only and the analysis needs a filters+selection body,
- * so this reads the response stream directly and parses the SSE framing —
- * events are `data: {json}` separated by a blank line.
+ * `EventSource` is GET-only and the analysis needs a request body, so this
+ * reads the response stream directly and parses the SSE framing — events
+ * are `data: {json}` separated by a blank line. Shared by every analysis
+ * endpoint (per-issue and portfolio-wide) since the framing is identical;
+ * only the URL and body shape differ.
  */
-export async function streamAnalysis(
-  endpoint: AnalysisEndpoint,
-  filters: FilterInput,
-  selection: RiskDetailSelection,
-  handlers: StreamHandlers,
-  signal?: AbortSignal,
-): Promise<void> {
+async function consumeStream(url: string, body: unknown, handlers: StreamHandlers, signal?: AbortSignal): Promise<void> {
   let response: Response;
   try {
-    response = await fetch(`/api/ai/${endpoint}/stream`, {
+    response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filters, selection }),
+      body: JSON.stringify(body),
       signal,
     });
   } catch (err) {
@@ -39,8 +37,8 @@ export async function streamAnalysis(
   }
 
   if (!response.ok || !response.body) {
-    const body = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
-    handlers.onError(body?.error?.message ?? `Analysis unavailable (HTTP ${response.status}).`);
+    const errorBody = (await response.json().catch(() => null)) as { error?: { message?: string } } | null;
+    handlers.onError(errorBody?.error?.message ?? `Analysis unavailable (HTTP ${response.status}).`);
     return;
   }
 
@@ -79,6 +77,43 @@ export async function streamAnalysis(
       handlers.onError(err instanceof Error ? err.message : "The analysis stream was interrupted.");
     }
   }
+}
+
+/** Per-issue analysis: Deep Analyse, Investigation Plan, Enterprise Comparison. */
+export function streamAnalysis(
+  endpoint: AnalysisEndpoint,
+  filters: FilterInput,
+  selection: RiskDetailSelection,
+  handlers: StreamHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  return consumeStream(`/api/ai/${endpoint}/stream`, { filters, selection }, handlers, signal);
+}
+
+/** Portfolio-wide analysis of whatever the manager's current filters show — no selection involved. */
+export function streamPortfolioAnalysis(
+  lens: PortfolioLens,
+  filters: FilterInput,
+  handlers: StreamHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  return consumeStream("/api/ai/portfolio/stream", { filters, lens }, handlers, signal);
+}
+
+export function streamFollowUp(
+  context: FollowUpContext,
+  question: string,
+  filters: FilterInput,
+  selection: RiskDetailSelection | undefined,
+  handlers: StreamHandlers,
+  signal?: AbortSignal,
+): Promise<void> {
+  return consumeStream(
+    "/api/ai/follow-up/stream",
+    { context, question, filters, ...(selection ? { selection } : {}) },
+    handlers,
+    signal,
+  );
 }
 
 function dispatch(event: Record<string, unknown>, handlers: StreamHandlers): void {

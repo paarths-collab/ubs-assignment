@@ -1,6 +1,7 @@
 import type { AppContext } from "../state/AppContext";
 import type { ScenarioSignal } from "../types";
 import { el } from "./dom";
+import { renderFollowUpPanel } from "./FollowUpPanel";
 
 /** One short line naming the dominant characteristic — replaces a row of badges. */
 function characterise(signal: ScenarioSignal): string {
@@ -12,6 +13,8 @@ function characterise(signal: ScenarioSignal): string {
 }
 
 export function renderRecurringIssues(ctx: AppContext, host: HTMLElement): void {
+  const followUp = renderFollowUpPanel(ctx, "issues");
+
   function sync(): void {
     const { priority, loading, selectedScenarioId } = ctx.getState();
 
@@ -20,6 +23,7 @@ export function renderRecurringIssues(ctx: AppContext, host: HTMLElement): void 
         el("div", { className: loading ? "loading-state" : "empty-state" }, [
           loading ? "Loading recurring issues…" : "No recurring issues in the current selection.",
         ]),
+        followUp,
       );
       return;
     }
@@ -57,7 +61,7 @@ export function renderRecurringIssues(ctx: AppContext, host: HTMLElement): void 
       ),
     );
 
-    host.replaceChildren(el("div", { className: "issue-grid" }, cards));
+    host.replaceChildren(el("div", { className: "issue-grid" }, cards), followUp);
   }
 
   ctx.subscribe(sync);

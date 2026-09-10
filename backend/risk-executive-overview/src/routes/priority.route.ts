@@ -12,7 +12,9 @@ export function registerPriorityRoute(app: FastifyInstance, repository: RiskRepo
     const filters = normalizeFilters(body.filters, config);
     const filteredEvents = filterEvents(repository.getEvents(), filters);
 
-    const scenarios = rankScenarioSignals(buildScenarioSignals(filteredEvents, repository.getPatterns(), config));
+    const scenarios = rankScenarioSignals(
+      buildScenarioSignals(filteredEvents, repository.getPatterns(), config, filters),
+    );
     const items = scenarios.slice(0, body.limit);
 
     return { filters, items, attention: buildAttentionCards(scenarios), totalCandidates: scenarios.length };

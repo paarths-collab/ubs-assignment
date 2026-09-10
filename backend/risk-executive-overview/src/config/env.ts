@@ -27,9 +27,9 @@ if (!parsed.success) {
   throw new Error("Invalid environment configuration");
 }
 
-/** Explicit choice wins; otherwise an OpenRouter key implies OpenRouter. */
+/** OpenRouter/DeepSeek is the default provider for the executive overview. */
 const llmProvider: "groq" | "openrouter" =
-  parsed.data.LLM_PROVIDER ?? (parsed.data.OPENROUTER_API_KEY ? "openrouter" : "groq");
+  parsed.data.LLM_PROVIDER ?? "openrouter";
 
 export const env = {
   ...parsed.data,

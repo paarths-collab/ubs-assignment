@@ -4,7 +4,9 @@ import { deriveScenarioTitle } from "../src/config/scenarioTitles";
 import { PRIORITY_THRESHOLDS } from "../src/services/PriorityThresholds";
 import { RiskRepository } from "../src/repositories/RiskRepository";
 import type { RiskPattern } from "../src/types/Pattern";
-import { makeEvent, makeConfig, resetCounter } from "./fixtures";
+import {makeEvent, makeConfig, resetCounter, makeFilters} from "./fixtures";
+
+const defaultFilters = makeFilters();
 
 function pattern(overrides: Partial<RiskPattern> = {}): RiskPattern {
   return {
@@ -38,7 +40,7 @@ describe("ScenarioService - Consolidation", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, patterns, config);
+    const signals = buildScenarioSignals(events, patterns, config, defaultFilters);
 
     expect(signals).toHaveLength(1);
     expect(signals[0]!.issueDetail).toBe(sharedIssue);
@@ -62,7 +64,7 @@ describe("ScenarioService - Consolidation", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, patterns, config);
+    const signals = buildScenarioSignals(events, patterns, config, defaultFilters);
 
     expect(signals).toHaveLength(2);
     const sorted = signals.sort((a, b) => a.issueDetail.localeCompare(b.issueDetail));
@@ -78,7 +80,7 @@ describe("ScenarioService - Consolidation", () => {
     const patterns = repo.getPatterns();
     const config = repo.getConfig();
 
-    const signals = buildScenarioSignals([...events], patterns, config);
+    const signals = buildScenarioSignals([...events], patterns, config, defaultFilters);
 
     expect(signals).toHaveLength(15);
   });
@@ -89,7 +91,7 @@ describe("ScenarioService - Consolidation", () => {
     const patterns = repo.getPatterns();
     const config = repo.getConfig();
 
-    const signals = buildScenarioSignals([...events], patterns, config);
+    const signals = buildScenarioSignals([...events], patterns, config, defaultFilters);
 
     const totalEvents = signals.reduce((sum, signal) => sum + signal.eventCount, 0);
     expect(totalEvents).toBe(1000);
@@ -110,7 +112,7 @@ describe("ScenarioService - Consolidation", () => {
     const patterns = repo.getPatterns();
     const config = repo.getConfig();
 
-    const signals = buildScenarioSignals([...events], patterns, config);
+    const signals = buildScenarioSignals([...events], patterns, config, defaultFilters);
     const patternsById = new Map(patterns.map((p) => [p.patternId, p]));
 
     for (const signal of signals) {
@@ -134,7 +136,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     expect(signals).toHaveLength(1);
     const analytics = signals[0]!.analytics;
@@ -156,7 +158,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const analytics = signals[0]!.analytics;
     expect(analytics.workflow.openEventCount).toBe(3);
@@ -173,7 +175,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const exposure = signals[0]!.analytics.exposure;
     expect(exposure.grossAmountUsd).toBeNull();
@@ -195,7 +197,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue1 } }), pattern({ group: { issueDetail: issue2 } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue1 } }), pattern({ group: { issueDetail: issue2 } })], config, defaultFilters);
 
     const signal1 = signals.find((s) => s.issueDetail === issue1);
     const signal2 = signals.find((s) => s.issueDetail === issue2);
@@ -217,7 +219,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const owners = signals[0]!.analytics.owners;
     expect(owners[0]!.key).toBe("Owner C");
@@ -238,7 +240,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const effort = signals[0]!.analytics.effort;
     expect(effort.totalRemediationHours).toBe(60);
@@ -256,7 +258,7 @@ describe("ScenarioService - Analytics Correctness", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const effort = signals[0]!.analytics.effort;
     expect(effort.totalRemediationHours).toBe(33);
@@ -291,7 +293,7 @@ describe("ScenarioService - Presentation Layer", () => {
     const events = [makeEvent({ issueDetail: issue })];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const dimensions = signals[0]!.dimensions;
     expect(dimensions).toHaveLength(4);
@@ -316,7 +318,7 @@ describe("ScenarioService - Presentation Layer", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const recurrenceDim = signals[0]!.dimensions.find((d) => d.dimension === "Recurrence");
     expect(recurrenceDim!.label).toBe("Cross-organisation");
@@ -332,7 +334,7 @@ describe("ScenarioService - Presentation Layer", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const recurrenceDim = signals[0]!.dimensions.find((d) => d.dimension === "Recurrence");
     expect(recurrenceDim!.label).not.toBe("Cross-organisation");
@@ -349,7 +351,7 @@ describe("ScenarioService - Presentation Layer", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const whyAttention = signals[0]!.whyAttention;
     expect(whyAttention.endsWith(".")).toBe(true);
@@ -365,7 +367,7 @@ describe("ScenarioService - Presentation Layer", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const whyAttention = signals[0]!.whyAttention;
     expect(whyAttention.length).toBeGreaterThan(0);
@@ -385,7 +387,7 @@ describe("ScenarioService - People Guardrail", () => {
     ];
 
     const config = makeConfig();
-    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config);
+    const signals = buildScenarioSignals(events, [pattern({ group: { issueDetail: issue } })], config, defaultFilters);
 
     const interpretation = signals[0]!.analytics.recurrence.interpretation;
     expect(interpretation).toContain("shared process or control pattern");
@@ -417,8 +419,8 @@ describe("ScenarioService - Ranking", () => {
     ];
 
     const config = makeConfig();
-    const signals1 = buildScenarioSignals(events1, [pattern({ patternId: "pat1", group: { issueDetail: issue1 } })], config);
-    const signals2 = buildScenarioSignals(events2, [pattern({ patternId: "pat2", group: { issueDetail: issue2 } })], config);
+    const signals1 = buildScenarioSignals(events1, [pattern({ patternId: "pat1", group: { issueDetail: issue1 } })], config, defaultFilters);
+    const signals2 = buildScenarioSignals(events2, [pattern({ patternId: "pat2", group: { issueDetail: issue2 } })], config, defaultFilters);
 
     const allSignals = [...signals1, ...signals2];
     const ranked = rankScenarioSignals(allSignals);
@@ -440,8 +442,8 @@ describe("ScenarioService - Ranking", () => {
     const events2 = [makeEvent({ issueDetail: issue2 })];
 
     const config = makeConfig();
-    const signals1 = buildScenarioSignals(events1, [pattern({ patternId: "z_pattern", group: { issueDetail: issue1 } })], config);
-    const signals2 = buildScenarioSignals(events2, [pattern({ patternId: "a_pattern", group: { issueDetail: issue2 } })], config);
+    const signals1 = buildScenarioSignals(events1, [pattern({ patternId: "z_pattern", group: { issueDetail: issue1 } })], config, defaultFilters);
+    const signals2 = buildScenarioSignals(events2, [pattern({ patternId: "a_pattern", group: { issueDetail: issue2 } })], config, defaultFilters);
 
     const allSignals = [...signals1, ...signals2];
     const ranked = rankScenarioSignals(allSignals);

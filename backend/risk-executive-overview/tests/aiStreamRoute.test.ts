@@ -204,3 +204,92 @@ describe("AI stream route — success path", () => {
     expect(full).toBe("one two three");
   });
 });
+
+describe("POST /api/ai/portfolio/stream — success path", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockCreateFn.mockReset();
+  });
+
+  it("emits analysis_start naming the single requested lens, then that one section end to end", async () => {
+    mockCreateFn.mockImplementation(() => Promise.resolve(mockStream(["Portfolio ", "insight."])));
+
+    const { buildApp } = await import("../src/app");
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/ai/portfolio/stream",
+      payload: { filters, lens: "unusual" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.headers["content-type"]).toContain("text/event-stream");
+
+    const events = parseSse(response.body);
+    const types = events.map((event) => event.type);
+
+    expect(types).toEqual([
+      "analysis_start",
+      "section_start",
+      "section_delta",
+      "section_delta",
+      "section_complete",
+      "analysis_complete",
+    ]);
+
+    const start = events[0]!;
+    expect(start.analysisType).toBe("portfolio-unusual");
+    expect((start.sections as Array<{ id: string; title: string }>)).toEqual([
+      { id: "portfolio-unusual", title: "What Is Unusual?" },
+    ]);
+    // No selection is involved — the panel describes the whole filtered view.
+    expect(start.eventCount).toBe(1000);
+
+    const text = events
+      .filter((event) => event.type === "section_delta")
+      .map((event) => event.delta)
+      .join("");
+    expect(text).toBe("Portfolio insight.");
+
+    const complete = events[events.length - 1]!;
+    expect(complete.analysisType).toBe("portfolio-unusual");
+    expect((complete.evidence as { eventCount: number }).eventCount).toBe(1000);
+  });
+
+  it("scopes analysis_start's eventCount to the manager's active filters, not the whole dataset", async () => {
+    mockCreateFn.mockImplementation(() => Promise.resolve(mockStream(["x"])));
+
+    const { buildApp } = await import("../src/app");
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/ai/portfolio/stream",
+      payload: { filters: { ...filters, severity: "High" }, lens: "analyse" },
+    });
+
+    const events = parseSse(response.body);
+    expect(events[0]!.eventCount).toBe(51); // known High-severity anchor — not 1000
+  });
+
+  it("reports a mid-stream provider failure as analysis_error inside the stream, matching the per-issue route's behaviour", async () => {
+    mockCreateFn.mockImplementation(() => Promise.reject(new Error("provider exploded")));
+
+    const { buildApp } = await import("../src/app");
+    const app = buildApp();
+
+    const response = await app.inject({
+      method: "POST",
+      url: "/api/ai/portfolio/stream",
+      payload: { filters, lens: "investigate" },
+    });
+
+    expect(response.statusCode).toBe(200);
+    const events = parseSse(response.body);
+    const error = events.find((event) => event.type === "analysis_error");
+    expect(error).toBeDefined();
+    expect(events.some((event) => event.type === "analysis_complete")).toBe(false);
+    expect(String(error!.message)).not.toContain("provider exploded");
+  });
+});
