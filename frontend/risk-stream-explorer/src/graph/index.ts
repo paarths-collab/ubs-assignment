@@ -28,8 +28,6 @@ import { FILTER_DEBOUNCE_MS, SEARCH_DEBOUNCE_MS } from "./graph-config";
 import { AiRequestError, requestAnalysis } from "./ai-client";
 import { renderAiMessage, renderAiResult } from "./ai-panel";
 import { renderScopeAnalytics } from "./analytics-panel";
-import { createInitialDirectoryState, renderEntityDirectory } from "./entity-directory";
-import type { EntityDirectoryState } from "./entity-directory";
 import type { NodeType, Severity } from "./types";
 import { computePriorityFlows } from "./priority-flows";
 import type { PriorityFlow, PriorityFlowId } from "./priority-flows";
@@ -82,8 +80,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
   </header>
   <nav class="priority-chip-strip" id="priority-chip-strip" aria-label="Priority investigations"></nav>
   <div class="app-body">
-    <aside class="entity-directory-panel" aria-label="Entity directory">
-      <div class="entity-directory" id="entity-directory"></div>
+    <aside class="entity-directory-panel filter-panel-collapsible" aria-label="More filters">
       <details class="directory-more-filters" id="directory-more-filters">
         <summary>More filters</summary>
         <div class="filter-panel-body" id="filter-panel-body">
@@ -222,8 +219,6 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
   const contextHeaderEl = appRoot.querySelector<HTMLDivElement>("#flow-context")!;
   const controlsEl = appRoot.querySelector<HTMLDivElement>("#flow-controls-host")!;
   const btnClearFilters = appRoot.querySelector<HTMLButtonElement>("#btn-clear-filters")!;
-  const btnFilterToggle = appRoot.querySelector<HTMLButtonElement>("#btn-filter-toggle")!;
-  const filterPanelBodyEl = appRoot.querySelector<HTMLDivElement>("#filter-panel-body")!;
   const priorityChipStripEl = appRoot.querySelector<HTMLElement>("#priority-chip-strip")!;
   const analyticsOrgsEl = appRoot.querySelector<HTMLDivElement>("#analytics-orgs")!;
   const analyticsIssuesEl = appRoot.querySelector<HTMLDivElement>("#analytics-issues")!;
@@ -626,13 +621,6 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   btnClearFilters.addEventListener("click", () => applyFilters(createEmptyFilterState(), true));
   btnClearNodeScope.addEventListener("click", () => selectRoot(null));
-
-  btnFilterToggle.addEventListener("click", () => {
-    const expanded = btnFilterToggle.getAttribute("aria-expanded") === "true";
-    const next = !expanded;
-    btnFilterToggle.setAttribute("aria-expanded", String(next));
-    filterPanelBodyEl.hidden = !next;
-  });
 
   // The full event table is heavy evidence, not something the analyst needs
   // open by default — it stays collapsed until explicitly requested.

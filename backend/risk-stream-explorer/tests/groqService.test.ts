@@ -42,6 +42,10 @@ describe("isRetryableGroqError", () => {
     expect(isRetryableGroqError({ code: "ETIMEDOUT" })).toBe(true);
   });
 
+  it("does not retry a hard timeout", () => {
+    expect(isRetryableGroqError({ name: "AbortError" })).toBe(false);
+  });
+
   it("treats an unrelated error as not retryable", () => {
     expect(isRetryableGroqError(new Error("boom"))).toBe(false);
   });
@@ -57,6 +61,7 @@ describe("GroqService", () => {
     expect(create).toHaveBeenCalledTimes(1);
     const [params] = create.mock.calls[0]!;
     expect(params.model).toBe("test-model");
+    expect(params.max_tokens).toBe(1600);
     expect(params.response_format.type).toBe("json_schema");
   });
 

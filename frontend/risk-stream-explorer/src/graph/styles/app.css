@@ -1008,7 +1008,7 @@
 
 .graph-page .graph-notices {
   position: absolute;
-  left: 0.5rem;
+  left: 10.35rem;
   bottom: 0.5rem;
   z-index: 10;
   max-width: calc(100% - 1rem);
@@ -1330,10 +1330,45 @@
   grid-template-columns: 80px minmax(0, 1fr) 310px;
 }
 
-.graph-page .filter-panel-collapsible {
+.graph-page .filter-panel-collapsible,
+.graph-page .entity-directory-panel {
   width: 80px;
   padding: 0.45rem;
   background: #0a0a09;
+}
+
+.graph-page .directory-more-filters {
+  color: var(--text-secondary);
+  font-size: 0.62rem;
+}
+
+.graph-page .directory-more-filters > summary {
+  cursor: pointer;
+  color: var(--accent);
+  list-style: none;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  padding: 0.4rem 0.15rem;
+}
+
+.graph-page .directory-more-filters[open] > summary {
+  writing-mode: horizontal-tb;
+  transform: none;
+  margin-bottom: 0.45rem;
+}
+
+.graph-page .directory-more-filters[open] {
+  position: absolute;
+  z-index: 20;
+  left: 0.4rem;
+  top: 0.4rem;
+  width: 17rem;
+  max-height: calc(100% - 0.8rem);
+  overflow: auto;
+  padding: 0.55rem;
+  background: #11110f;
+  border: 1px solid var(--accent);
+  border-radius: 3px;
 }
 
 .graph-page .filter-panel-collapsible .filter-panel-toggle {
@@ -1469,7 +1504,7 @@
 .graph-page .floating-legend {
   position: absolute;
   left: 0.55rem;
-  top: 0.55rem;
+  bottom: 0.55rem;
   z-index: 5;
   width: 9rem;
   padding: 0.5rem;

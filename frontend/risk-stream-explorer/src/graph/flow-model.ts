@@ -75,13 +75,10 @@ const STEP = {
  * up toward Organisations, not only downstream toward Risk Theme.
  */
 const FULL_CHAIN: Record<NodeType, FlowStep[]> = {
-  // Deliberately one column only. The unrooted view fans out to every
-  // organisation at once (unlike a selected organisation, which fans out
-  // from a single branch) — chaining Issue/Root Cause/Theme past that would
-  // multiply 24 branches by each branch's own top-N, producing hundreds of
-  // nodes before the analyst has narrowed anything. Selecting one
-  // organisation is what unlocks its full downstream chain.
-  enterprise: [STEP.organisation],
+  // Priority investigations intentionally start with the useful relationship
+  // path rather than stopping at the enterprise node: Organisation → Issue →
+  // Root Cause. Top-N collapsing keeps this readable even for All events.
+  enterprise: [STEP.organisation, STEP.issue, STEP.rootCause],
   organisation: [STEP.issue, STEP.rootCause, STEP.riskTheme, STEP.orCategory],
   person: [STEP.role, STEP.issue, STEP.rootCause],
   issue: [STEP.organisation, STEP.rootCause, STEP.riskTheme, STEP.orCategory],
