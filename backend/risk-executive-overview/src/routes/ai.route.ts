@@ -3,7 +3,7 @@ import type { RiskRepository } from "../repositories/RiskRepository";
 import { ManagerInsightRequestSchema } from "../schemas/ai.schema";
 import { normalizeFilters, filterEvents } from "../services/FilterService";
 import { buildAiFactPackage } from "../services/AiFactService";
-import { generateManagerInsight, isAiConfigured } from "../services/GroqService";
+import { generateManagerInsight, isAiConfigured } from "../services/LlmService";
 import { AppError } from "../utils/errors";
 
 export function registerAiRoute(app: FastifyInstance, repository: RiskRepository): void {

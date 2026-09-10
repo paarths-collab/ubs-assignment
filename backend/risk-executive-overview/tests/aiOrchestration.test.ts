@@ -434,7 +434,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
 
     // Mock the GroqService to capture calls and return a sentinel for the first call
     const { runAnalysisSection } = await import("../src/services/AIAnalysisOrchestrator");
-    const GroqService = await import("../src/services/GroqService");
+    const GroqService = await import("../src/services/LlmService");
 
     let callCount = 0;
     const capturedMessages: Array<Array<{ role: string; content: string }>> = [];
@@ -498,7 +498,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
     vi.resetModules();
 
     const { runAnalysisSection } = await import("../src/services/AIAnalysisOrchestrator");
-    const GroqService = await import("../src/services/GroqService");
+    const GroqService = await import("../src/services/LlmService");
 
     const chunks = ["Hello ", "world", "!"];
     let chunkIndex = 0;
@@ -539,7 +539,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
     vi.resetModules();
 
     const { runAnalysisSection } = await import("../src/services/AIAnalysisOrchestrator");
-    const GroqService = await import("../src/services/GroqService");
+    const GroqService = await import("../src/services/LlmService");
 
     const testResponse = "Stream chunk 1 Stream chunk 2";
 
@@ -567,7 +567,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
   it("streamCompletion throws AI_UNAVAILABLE when underlying call rejects", async () => {
     vi.resetModules();
 
-    const { streamCompletion } = await import("../src/services/GroqService");
+    const { streamCompletion } = await import("../src/services/LlmService");
 
     mockCreateFn.mockRejectedValueOnce(new Error("Connection failed"));
 

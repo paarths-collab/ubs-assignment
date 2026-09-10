@@ -1,18 +1,18 @@
 /**
- * Manual, real-Groq smoke test for the Manager Assistant. Not part of the
- * automated test suite (which mocks groq-sdk exclusively) — run this by
- * hand after setting GROQ_API_KEY in backend/risk-executive-overview/.env.
+ * Manual, real-provider smoke test for the Manager Assistant. Not part of the
+ * automated test suite (which never calls a live model) — run this by hand
+ * after setting a provider key in backend/risk-executive-overview/.env.
  *
  *   npm run smoke:ai --workspace=backend/risk-executive-overview
  */
 import { RiskRepository } from "../src/repositories/RiskRepository";
 import { normalizeFilters, filterEvents, ENTERPRISE_WIDE } from "../src/services/FilterService";
 import { buildAiFactPackage } from "../src/services/AiFactService";
-import { generateManagerInsight, isAiConfigured } from "../src/services/GroqService";
+import { generateManagerInsight, isAiConfigured } from "../src/services/LlmService";
 
 async function main(): Promise<void> {
   if (!isAiConfigured()) {
-    console.error("GROQ_API_KEY is not set — nothing to smoke test. Set it in backend/risk-executive-overview/.env.");
+    console.error("No LLM provider key is set — nothing to smoke test. Set OPENROUTER_API_KEY or GROQ_API_KEY in backend/risk-executive-overview/.env.");
     process.exitCode = 1;
     return;
   }

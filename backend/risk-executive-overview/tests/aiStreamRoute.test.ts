@@ -187,7 +187,7 @@ describe("AI stream route — success path", () => {
       }),
     );
 
-    const { streamCompletion } = await import("../src/services/GroqService");
+    const { streamCompletion } = await import("../src/services/LlmService");
     await expect(streamCompletion("system", "user", () => {})).rejects.toMatchObject({
       code: "AI_INVALID_RESPONSE",
     });
@@ -196,7 +196,7 @@ describe("AI stream route — success path", () => {
   it("concatenates streamed chunks and invokes onDelta once per chunk", async () => {
     mockCreateFn.mockImplementation(() => Promise.resolve(mockStream(["one ", "two ", "three"])));
 
-    const { streamCompletion } = await import("../src/services/GroqService");
+    const { streamCompletion } = await import("../src/services/LlmService");
     const deltas: string[] = [];
     const full = await streamCompletion("system", "user", (delta) => deltas.push(delta));
 

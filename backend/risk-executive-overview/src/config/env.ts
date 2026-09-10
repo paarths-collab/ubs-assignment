@@ -12,6 +12,12 @@ const EnvSchema = z.object({
   GROQ_MODEL: z.string().default("openai/gpt-oss-120b"),
   GROQ_TIMEOUT_MS: z.coerce.number().int().positive().default(20000),
   GROQ_REASONING_EFFORT: z.enum(["low", "medium", "high"]).default("low"),
+
+  // OpenRouter is OpenAI-API-compatible, so it needs no extra SDK.
+  LLM_PROVIDER: z.enum(["groq", "openrouter"]).optional(),
+  OPENROUTER_API_KEY: z.string().min(1).optional(),
+  OPENROUTER_MODEL: z.string().default("deepseek/deepseek-chat"),
+  OPENROUTER_BASE_URL: z.string().default("https://openrouter.ai/api/v1"),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -21,8 +27,15 @@ if (!parsed.success) {
   throw new Error("Invalid environment configuration");
 }
 
+/** Explicit choice wins; otherwise an OpenRouter key implies OpenRouter. */
+const llmProvider: "groq" | "openrouter" =
+  parsed.data.LLM_PROVIDER ?? (parsed.data.OPENROUTER_API_KEY ? "openrouter" : "groq");
+
 export const env = {
   ...parsed.data,
   CORS_ORIGINS: parsed.data.CORS_ORIGINS.split(",").map((origin) => origin.trim()).filter(Boolean),
-  aiConfigured: Boolean(parsed.data.GROQ_API_KEY),
+  llmProvider,
+  /** The AI features are usable only if the *selected* provider has a key. */
+  aiConfigured:
+    llmProvider === "openrouter" ? Boolean(parsed.data.OPENROUTER_API_KEY) : Boolean(parsed.data.GROQ_API_KEY),
 };
