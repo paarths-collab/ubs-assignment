@@ -14,6 +14,7 @@
     "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
     "dev:server": "npm run dev --workspace=backend/risk-stream-explorer",
     "build": "npm run build --workspace=frontend/risk-stream-explorer && node -e \"require('fs').renameSync('dist/index.html','dist/risk-stream-explorer.html')\"",
+    "build:vercel": "npm run build --workspace=frontend/risk-stream-explorer && npm run build:overview && node scripts/assemble-vercel-output.mjs",
     "dev:api": "npm run dev --workspace=backend/risk-executive-overview",
     "dev:overview": "npm run dev --workspace=frontend/risk-executive-overview",
     "build:overview": "npm run build --workspace=frontend/risk-executive-overview",

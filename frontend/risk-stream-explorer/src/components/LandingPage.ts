@@ -82,7 +82,7 @@ export function renderLandingPage(repository: EventRepository, root: HTMLElement
 
   const navCards = [
     navCard({
-      route: "issues",
+      route: "kpi",
       index: "Section 01",
       title: "Executive Risk Overview",
       question: "What needs management attention now?",
