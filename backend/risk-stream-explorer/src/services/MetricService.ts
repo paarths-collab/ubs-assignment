@@ -1,8 +1,8 @@
-import type { EventType, Severity, StreamEvent } from "../types/Event";
-import type { CategoryBreakdown, DelayMetrics, PeriodMetrics } from "../types/Metrics";
-import { SEVERITY_VALUES, EVENT_TYPE_VALUES, shortOrganisationName } from "../config/constants";
-import { mean, median } from "../utils/dateUtils";
-import { computeFinancialMetrics } from "./FinancialService";
+import type { EventType, Severity, StreamEvent } from "../types/Event.js";
+import type { CategoryBreakdown, DelayMetrics, PeriodMetrics } from "../types/Metrics.js";
+import { SEVERITY_VALUES, EVENT_TYPE_VALUES, shortOrganisationName } from "../config/constants.js";
+import { mean, median } from "../utils/dateUtils.js";
+import { computeFinancialMetrics } from "./FinancialService.js";
 
 export function breakdownByKey(
   events: StreamEvent[],

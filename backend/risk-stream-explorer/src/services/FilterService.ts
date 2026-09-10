@@ -1,6 +1,6 @@
-import type { StreamEvent } from "../types/Event";
-import type { FilterState } from "../types/Filters";
-import { compareIsoDate } from "../utils/dateUtils";
+import type { StreamEvent } from "../types/Event.js";
+import type { FilterState } from "../types/Filters.js";
+import { compareIsoDate } from "../utils/dateUtils.js";
 
 /**
  * The single filtering pipeline used everywhere in the app. Every component

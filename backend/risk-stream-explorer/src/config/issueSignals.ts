@@ -1,4 +1,4 @@
-import type { CounterSignalId, SignalId } from "../types/Issue";
+import type { CounterSignalId, SignalId } from "../types/Issue.js";
 
 /**
  * The ONE place every threshold and weight for issue-intelligence ranking

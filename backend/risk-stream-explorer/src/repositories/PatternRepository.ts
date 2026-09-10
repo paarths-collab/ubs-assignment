@@ -1,5 +1,5 @@
-import type { EnterpriseBaseline } from "../types/RiskEvent";
-import type { Pattern, RiskPatternsDataset } from "../types/Pattern";
+import type { EnterpriseBaseline } from "../types/RiskEvent.js";
+import type { Pattern, RiskPatternsDataset } from "../types/Pattern.js";
 
 /**
  * Owns the pattern list and its indexes. Built once at startup from the

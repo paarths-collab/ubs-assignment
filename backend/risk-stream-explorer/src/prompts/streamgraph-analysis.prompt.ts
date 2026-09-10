@@ -6,7 +6,7 @@ import type {
   SimilarEventMatch,
   StreamEvent,
   TrendFact,
-} from "../index";
+} from "../index.js";
 import {
   formatDays,
   formatMoney,
@@ -14,7 +14,7 @@ import {
   formatPercentagePoints,
   formatSignedPercent,
   shortOrganisationName,
-} from "../index";
+} from "../index.js";
 export interface ChatMessage {
   role: "system" | "user" | "assistant";
   content: string;

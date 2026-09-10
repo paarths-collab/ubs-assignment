@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import type { GroqService } from "./GroqService";
+import type { GroqService } from "./GroqService.js";
 import { z } from "zod";
 
 interface BrainEvent {

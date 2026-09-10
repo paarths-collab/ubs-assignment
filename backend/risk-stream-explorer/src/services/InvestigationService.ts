@@ -1,7 +1,7 @@
-import type { PatternRepository } from "../repositories/PatternRepository";
-import type { RiskEventRepository } from "../repositories/RiskEventRepository";
-import type { Investigation, ObservedFacts } from "../types/Investigation";
-import type { Pattern } from "../types/Pattern";
+import type { PatternRepository } from "../repositories/PatternRepository.js";
+import type { RiskEventRepository } from "../repositories/RiskEventRepository.js";
+import type { Investigation, ObservedFacts } from "../types/Investigation.js";
+import type { Pattern } from "../types/Pattern.js";
 
 /**
  * Composes a pattern -> matching events -> enterprise comparison -> graph

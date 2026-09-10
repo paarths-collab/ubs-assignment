@@ -1,6 +1,6 @@
 import { z } from "zod";
-import type { GroqStructuredResult } from "../types/Investigation";
-import type { GroqIssueStructuredResult } from "../types/Issue";
+import type { GroqStructuredResult } from "../types/Investigation.js";
+import type { GroqIssueStructuredResult } from "../types/Issue.js";
 
 const MIN_QUESTIONS = 2;
 const MAX_QUESTIONS = 8;

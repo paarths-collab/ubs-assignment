@@ -1,4 +1,4 @@
-import { loadLlmConfig, type LlmConfig } from "./llm";
+import { loadLlmConfig, type LlmConfig } from "./llm.js";
 
 export interface Env {
   /**

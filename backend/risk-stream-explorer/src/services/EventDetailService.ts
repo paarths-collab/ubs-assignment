@@ -1,5 +1,5 @@
-import type { RawFullEventDetail } from "../types/Event";
-import { EVENT_DETAIL_SECTIONS, type FieldFormat } from "../config/fieldRegistry";
+import type { RawFullEventDetail } from "../types/Event.js";
+import { EVENT_DETAIL_SECTIONS, type FieldFormat } from "../config/fieldRegistry.js";
 
 export interface RenderedField {
   label: string;

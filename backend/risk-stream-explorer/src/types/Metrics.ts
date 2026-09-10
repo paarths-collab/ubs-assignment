@@ -1,4 +1,4 @@
-import type { EventType, Severity } from "./Event";
+import type { EventType, Severity } from "./Event.js";
 
 /**
  * Null-safe aggregate for a monetary field. `total` sums only the events that

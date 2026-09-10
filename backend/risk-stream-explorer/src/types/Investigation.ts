@@ -1,5 +1,5 @@
-import type { Pattern, PatternComparedWithEnterprise } from "./Pattern";
-import type { EnterpriseBaseline, RiskEvent } from "./RiskEvent";
+import type { Pattern, PatternComparedWithEnterprise } from "./Pattern.js";
+import type { EnterpriseBaseline, RiskEvent } from "./RiskEvent.js";
 
 /** Response body of `GET /api/investigations/:patternId`. */
 export interface Investigation {

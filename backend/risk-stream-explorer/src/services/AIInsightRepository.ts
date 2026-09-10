@@ -1,22 +1,22 @@
-import type { StreamEvent } from "../types/Event";
-import type { EventInsightIntent, InsightPayload, PeriodInsightIntent } from "../types/AIInsight";
-import type { FilterState, Granularity } from "../types/Filters";
-import type { Period } from "../types/Timeline";
-import type { EventRepository } from "../repositories/EventRepository";
-import { shortOrganisationName } from "../config/constants";
-import { applyFilters } from "./FilterService";
-import { computePeriodMetrics } from "./MetricService";
-import { comparePeriods } from "./ComparisonService";
-import { detectTrendFacts, rankTrendFacts } from "./TrendService";
-import { findSimilarEvents } from "./SimilarEventService";
+import type { StreamEvent } from "../types/Event.js";
+import type { EventInsightIntent, InsightPayload, PeriodInsightIntent } from "../types/AIInsight.js";
+import type { FilterState, Granularity } from "../types/Filters.js";
+import type { Period } from "../types/Timeline.js";
+import type { EventRepository } from "../repositories/EventRepository.js";
+import { shortOrganisationName } from "../config/constants.js";
+import { applyFilters } from "./FilterService.js";
+import { computePeriodMetrics } from "./MetricService.js";
+import { comparePeriods } from "./ComparisonService.js";
+import { detectTrendFacts, rankTrendFacts } from "./TrendService.js";
+import { findSimilarEvents } from "./SimilarEventService.js";
 import {
   generateEventInsight,
   generatePeriodInsight,
   type EventInsightContext,
   type PeriodInsightContext,
-} from "./InsightNarrator";
-import { getEventsInPeriod, getPreviousPeriod } from "./TimelineService";
-import { compareIsoDate } from "../utils/dateUtils";
+} from "./InsightNarrator.js";
+import { getEventsInPeriod, getPreviousPeriod } from "./TimelineService.js";
+import { compareIsoDate } from "../utils/dateUtils.js";
 
 /**
  * Canonical scope key format matching the offline-precompute convention

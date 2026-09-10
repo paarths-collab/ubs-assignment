@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import type { IssueIntelligenceService } from "../services/IssueIntelligenceService";
-import type { PatternRepository } from "../repositories/PatternRepository";
+import type { IssueIntelligenceService } from "../services/IssueIntelligenceService.js";
+import type { PatternRepository } from "../repositories/PatternRepository.js";
 
 /**
  * Issue-centric entry point (the pivot from the 22-item pattern priority

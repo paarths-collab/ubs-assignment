@@ -1,8 +1,8 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadEnv } from "./config/env";
-import { buildApp } from "./app";
+import { loadEnv } from "./config/env.js";
+import { buildApp } from "./app.js";
 
 /**
  * Loads backend/risk-stream-explorer/.env into process.env.

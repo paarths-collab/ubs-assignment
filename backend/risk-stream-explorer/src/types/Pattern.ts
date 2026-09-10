@@ -1,4 +1,4 @@
-import type { EnterpriseBaseline } from "./RiskEvent";
+import type { EnterpriseBaseline } from "./RiskEvent.js";
 
 /**
  * Types for `data/risk_patterns_final.json` (Component 4's pattern-intelligence

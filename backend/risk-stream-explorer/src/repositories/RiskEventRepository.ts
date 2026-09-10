@@ -1,4 +1,4 @@
-import type { RiskEvent } from "../types/RiskEvent";
+import type { RiskEvent } from "../types/RiskEvent.js";
 
 /**
  * Owns the Component 4 event list (`risk_events_final.json`) and its id

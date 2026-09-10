@@ -1,6 +1,6 @@
-import type { StreamEvent } from "../types/Event";
-import type { SimilarEventMatch } from "../types/AIInsight";
-import { SIMILAR_EVENTS_LIMIT } from "../config/constants";
+import type { StreamEvent } from "../types/Event.js";
+import type { SimilarEventMatch } from "../types/AIInsight.js";
+import { SIMILAR_EVENTS_LIMIT } from "../config/constants.js";
 
 interface ScoredMatch {
   event: StreamEvent;

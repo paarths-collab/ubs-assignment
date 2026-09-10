@@ -1,6 +1,6 @@
-import type { StreamEvent } from "../types/Event";
-import type { FinancialMetrics, MoneyMetric } from "../types/Metrics";
-import { mean } from "../utils/dateUtils";
+import type { StreamEvent } from "../types/Event.js";
+import type { FinancialMetrics, MoneyMetric } from "../types/Metrics.js";
+import { mean } from "../utils/dateUtils.js";
 
 /**
  * Null-safe aggregation of one monetary field across a set of events. Events

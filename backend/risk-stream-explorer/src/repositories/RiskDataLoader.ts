@@ -1,12 +1,12 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import type { RiskEventsDataset } from "../types/RiskEvent";
-import type { RiskPatternsDataset } from "../types/Pattern";
-import { validateRiskDataset } from "../validation/validateRiskDataset";
-import type { ValidationResult } from "../validation/validateDataset";
-import { PatternRepository } from "./PatternRepository";
-import { RiskEventRepository } from "./RiskEventRepository";
+import type { RiskEventsDataset } from "../types/RiskEvent.js";
+import type { RiskPatternsDataset } from "../types/Pattern.js";
+import { validateRiskDataset } from "../validation/validateRiskDataset.js";
+import type { ValidationResult } from "../validation/validateDataset.js";
+import { PatternRepository } from "./PatternRepository.js";
+import { RiskEventRepository } from "./RiskEventRepository.js";
 
 export interface LoadedRiskDataset {
   eventRepository: RiskEventRepository;

@@ -21,16 +21,16 @@ import {
   type PeriodInsightIntent,
   type RawFullEventDetailMap,
   type RawStreamEventList,
-} from "../index";
+} from "../index.js";
 import {
   buildEventMessages,
   buildPeriodMessages,
   type ChatMessage,
-} from "../prompts/streamgraph-analysis.prompt";
-import type { GroqService } from "./GroqService";
-import { AIInsightRepository } from "./AIInsightRepository";
-import type { InsightPayload } from "../types/AIInsight";
-import type { StreamEvent } from "../types/Event";
+} from "../prompts/streamgraph-analysis.prompt.js";
+import type { GroqService } from "./GroqService.js";
+import { AIInsightRepository } from "./AIInsightRepository.js";
+import type { InsightPayload } from "../types/AIInsight.js";
+import type { StreamEvent } from "../types/Event.js";
 
 export class StreamgraphPeriodNotFoundError extends Error {
   constructor(periodId: string) {

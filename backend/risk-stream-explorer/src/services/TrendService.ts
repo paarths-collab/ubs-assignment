@@ -1,5 +1,5 @@
-import type { CategoryBreakdown, PeriodMetrics, TrendFact, TrendMetricCategory } from "../types/Metrics";
-import { SEVERITY_VALUES } from "../config/constants";
+import type { CategoryBreakdown, PeriodMetrics, TrendFact, TrendMetricCategory } from "../types/Metrics.js";
+import { SEVERITY_VALUES } from "../config/constants.js";
 
 function directionOf(deltaPercentagePoints: number | null, isNewCategory: boolean): TrendFact["direction"] {
   if (isNewCategory) return "new";

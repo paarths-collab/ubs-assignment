@@ -1,6 +1,6 @@
-import type { EventType, Severity } from "../types/Event";
-import type { Delta, PeriodComparison, PeriodMetrics, ShareDelta } from "../types/Metrics";
-import { EVENT_TYPE_VALUES, SEVERITY_VALUES } from "../config/constants";
+import type { EventType, Severity } from "../types/Event.js";
+import type { Delta, PeriodComparison, PeriodMetrics, ShareDelta } from "../types/Metrics.js";
+import { EVENT_TYPE_VALUES, SEVERITY_VALUES } from "../config/constants.js";
 
 /**
  * Computes a directional delta between a current and previous value.

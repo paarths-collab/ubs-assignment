@@ -1,4 +1,4 @@
-import type { EnterpriseBaseline } from "./RiskEvent";
+import type { EnterpriseBaseline } from "./RiskEvent.js";
 
 /**
  * Types for the issue-intelligence layer (Component 4's issue-centric entry

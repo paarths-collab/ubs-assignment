@@ -1,22 +1,22 @@
-import type { RawFullEventDetail, StreamEvent } from "../types/Event";
+import type { RawFullEventDetail, StreamEvent } from "../types/Event.js";
 import type {
   EventInsightIntent,
   InsightPayload,
   PeriodInsightIntent,
   SimilarEventMatch,
   SupportingMetric,
-} from "../types/AIInsight";
-import { INSUFFICIENT_EVIDENCE_TEXT } from "../types/AIInsight";
-import type { PeriodComparison, TrendFact } from "../types/Metrics";
-import { getControlGuidance } from "../config/controlPlaybook";
-import { shortOrganisationName } from "../config/constants";
+} from "../types/AIInsight.js";
+import { INSUFFICIENT_EVIDENCE_TEXT } from "../types/AIInsight.js";
+import type { PeriodComparison, TrendFact } from "../types/Metrics.js";
+import { getControlGuidance } from "../config/controlPlaybook.js";
+import { shortOrganisationName } from "../config/constants.js";
 import {
   formatDays,
   formatMoney,
   formatPercent,
   formatPercentagePoints,
   formatSignedPercent,
-} from "../utils/formatUtils";
+} from "../utils/formatUtils.js";
 
 /**
  * Deterministic, template-driven AI narration layer. Every sentence here is
