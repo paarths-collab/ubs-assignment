@@ -578,8 +578,18 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
    *   rebuilding it would collapse the group the analyst is working in and
    *   throw away their focus mid-selection.
    */
-  function applyFilters(next: FilterState, rerenderPanel = false): void {
-    store.setState((state) => ({ ...state, filters: next, filteredEventIds: computeEffectiveEventIds(next, state.priorityFlow) }));
+  /**
+   * `alsoClearPriorityFlow` is for the "Clear filters" button. A priority
+   * flow narrows the event set exactly as the panel's filters do, so leaving
+   * it applied made that button look broken: the analyst cleared everything
+   * and the graph still showed only the flow's events. Panel edits keep the
+   * flow, since narrowing within a chosen flow is the normal way to work.
+   */
+  function applyFilters(next: FilterState, rerenderPanel = false, alsoClearPriorityFlow = false): void {
+    store.setState((state) => {
+      const priorityFlow = alsoClearPriorityFlow ? null : state.priorityFlow;
+      return { ...state, filters: next, priorityFlow, filteredEventIds: computeEffectiveEventIds(next, priorityFlow) };
+    });
 
     // A root the new scope no longer supports must not linger.
     const state = store.getState();
@@ -591,6 +601,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
     tableState = createInitialTableState();
     renderScopeBadge();
+    if (alsoClearPriorityFlow) renderPriorityChipStrip();
     if (rerenderPanel) renderFilters();
     // Narrowing/widening the same investigation shouldn't reset whatever
     // pan/zoom the analyst already set up — only reframe the camera when
@@ -619,7 +630,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
     });
   }
 
-  btnClearFilters.addEventListener("click", () => applyFilters(createEmptyFilterState(), true));
+  btnClearFilters.addEventListener("click", () => applyFilters(createEmptyFilterState(), true, true));
   btnClearNodeScope.addEventListener("click", () => selectRoot(null));
 
   // The full event table is heavy evidence, not something the analyst needs
