@@ -4,13 +4,22 @@ import { streamFollowUp, type FollowUpContext } from "../services/aiStreamClient
 import { el } from "./dom";
 import { renderStreamingPanel } from "./StreamingAnalysisPanel";
 
-/** A small, context-aware question box shared by every dashboard section. */
+/** A compact, context-aware AI entry point shared by every dashboard section. */
 export function renderFollowUpPanel(
   ctx: AppContext,
   context: FollowUpContext,
   getSelection?: () => RiskDetailSelection | undefined,
 ): HTMLElement {
   const panel = renderStreamingPanel("Ask about this section");
+  panel.root.classList.add("follow-up__panel");
+  panel.root.hidden = true;
+
+  const toggle = el("button", { type: "button", className: "follow-up-toggle" }, ["Ask AI"] ) as HTMLButtonElement;
+  toggle.addEventListener("click", () => {
+    panel.root.hidden = false;
+    toggle.hidden = true;
+  });
+
   const input = el("input", {
     type: "text",
     className: "follow-up__input",
@@ -42,7 +51,9 @@ export function renderFollowUpPanel(
     if (key === lastKey) return;
     lastKey = key;
     panel.reset();
+    panel.root.hidden = true;
+    toggle.hidden = false;
   });
 
-  return panel.root;
+  return el("div", { className: "follow-up" }, [toggle, panel.root]);
 }
