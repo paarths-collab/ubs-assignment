@@ -144,3 +144,49 @@ describe("OpenRouterClient", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 });
+
+describe("OpenRouter deadlines", () => {
+  afterEach(() => { vi.useRealTimers(); globalThis.fetch = originalFetch; });
+  it("bounds a provider which never returns headers, even if it ignores abort", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {}));
+    globalThis.fetch = fetchMock;
+    const { streamOpenRouter } = await import("../src/services/OpenRouterClient");
+    const task = streamOpenRouter("s", "u", () => {}, { timeoutMs: 25 });
+    const rejected = expect(task).rejects.toMatchObject({ code: "AI_UNAVAILABLE" });
+    await vi.advanceTimersByTimeAsync(25);
+    await rejected;
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).signal!.aborted).toBe(true);
+  });
+  it.each(["stream", "json"])("keeps the deadline active while consuming a stalled %s body", async (kind) => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(new ReadableStream({ cancel })));
+    const { streamOpenRouter, completeOpenRouterJson } = await import("../src/services/OpenRouterClient");
+    const task = kind === "stream" ? streamOpenRouter("s", "u", () => {}, { timeoutMs: 25 }) : completeOpenRouterJson("s", "u", undefined, { timeoutMs: 25 });
+    const rejected = expect(task).rejects.toMatchObject({ code: "AI_UNAVAILABLE" });
+    await vi.advanceTimersByTimeAsync(25);
+    await rejected;
+    if (kind === "stream") expect(cancel).toHaveBeenCalled();
+  });
+  it("propagates browser cancellation to the provider", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => new Promise(() => {}));
+    globalThis.fetch = fetchMock;
+    const { streamOpenRouter } = await import("../src/services/OpenRouterClient");
+    const controller = new AbortController();
+    const task = streamOpenRouter("s", "u", () => {}, { signal: controller.signal });
+    const rejected = expect(task).rejects.toMatchObject({ code: "AI_UNAVAILABLE" });
+    controller.abort();
+    await rejected;
+    expect((fetchMock.mock.calls[0]![1] as RequestInit).signal!.aborted).toBe(true);
+  });
+  it("finishes at DONE without waiting for the provider to close the connection", async () => {
+    const cancel = vi.fn();
+    globalThis.fetch = vi.fn().mockResolvedValue(new Response(new ReadableStream({
+      start(controller) { controller.enqueue(new TextEncoder().encode(`${delta("Verified qualitative explanation.")}data: [DONE]\n\n`)); }, cancel,
+    })));
+    const { streamOpenRouter } = await import("../src/services/OpenRouterClient");
+    await expect(streamOpenRouter("s", "u", () => {})).resolves.toBe("Verified qualitative explanation.");
+    expect(cancel).toHaveBeenCalled();
+  });
+});

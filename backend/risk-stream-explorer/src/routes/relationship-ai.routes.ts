@@ -34,7 +34,8 @@ export function registerRelationshipAiRoutes(app: FastifyInstance, service: Rela
       return {
         requestId: request.id,
         generatedAt: new Date().toISOString(),
-        model,
+        model: result.provenance.analysis === "deterministic-fallback" ? "verified-deterministic-fallback" : model,
+        provenance: result.provenance,
         verifiedFacts: {
           scope: { eventCount: result.eventCount, requestedEventCount: parsed.data.eventIds.length, droppedEventCount: parsed.data.eventIds.length - result.eventCount },
           selectedNode: result.selectedNode,

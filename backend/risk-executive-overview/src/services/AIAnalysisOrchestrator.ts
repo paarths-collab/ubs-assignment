@@ -1,4 +1,5 @@
 import { streamCompletion } from "./LlmService.js";
+import { assertGroundedAnalysis, type LlmCallOptions } from "./AnalysisSafety.js";
 
 /**
  * Shared behavioural contract for every analysis call. The specialist prompt
@@ -186,15 +187,22 @@ ${JSON.stringify(dossier)}`;
  * the dossier shape so the same function grounds both the per-issue
  * RiskDossier and the whole-view PortfolioDossier.
  */
-export function runAnalysisSection<T>(
+export async function runAnalysisSection<T>(
   section: AnalysisSection,
   dossier: T,
   onDelta: (text: string) => void,
+  options: LlmCallOptions = {},
 ): Promise<string> {
-  return streamCompletion(
+  const chunks: string[] = [];
+  const text = await streamCompletion(
     ANALYST_SYSTEM_PROMPT,
     buildUserPrompt(section, dossier),
-    onDelta,
+    (delta) => chunks.push(delta),
     section.reasoningEffort,
+    options,
   );
+  if (options.signal?.aborted) throw new Error("Analysis was cancelled.");
+  assertGroundedAnalysis([text], dossier);
+  for (const chunk of chunks) onDelta(chunk);
+  return text;
 }

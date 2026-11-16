@@ -38,7 +38,7 @@ function boot(): void {
   if (!root) return;
 
   root.innerHTML = "";
-  root.append(el("div", { className: "loading-state", style: "padding:64px" }, ["Loading risk event data…"]));
+  root.append(el("div", { className: "loading-state", style: "padding:64px" }, ["Loading analysis data…"]));
 
   let loaded;
   try {
@@ -66,20 +66,23 @@ function boot(): void {
   }
 
   const repository = new EventRepository(loaded.events, loaded.detailsById);
+  let cleanupPage: (() => void) | undefined;
 
   function renderRoute(): void {
+    cleanupPage?.();
+    cleanupPage = undefined;
     const route = currentRoute();
     if (route === "kpi") {
       window.location.assign("/kpi");
       return;
     } else if (route === "streamgraph") {
-      renderStreamgraphPage(repository, loaded!.aiData, root!);
+      cleanupPage = renderStreamgraphPage(repository, loaded!.aiData, root!);
     } else if (route === "issues") {
       renderIssuesPage(root!);
     } else if (route === "patterns") {
       renderPatternIntelligencePage(root!);
     } else if (route === "graph") {
-      renderGraphPage(root!, () => navigate("home"), hrefFor("home"));
+      cleanupPage = renderGraphPage(root!, () => navigate("home"), hrefFor("home"));
     } else {
       renderLandingPage(repository, root!);
     }
@@ -90,7 +93,7 @@ function boot(): void {
   renderRoute();
 }
 
-function renderStreamgraphPage(repository: EventRepository, aiData: unknown, root: HTMLElement): void {
+function renderStreamgraphPage(repository: EventRepository, aiData: unknown, root: HTMLElement): () => void {
   const ctx = new AppContext(repository, aiData);
 
   root.innerHTML = "";
@@ -113,10 +116,10 @@ function renderStreamgraphPage(repository: EventRepository, aiData: unknown, roo
               navigate("home");
             },
           },
-          ["← Operational Risk Workbench"],
+          ["← Signal · Data Analysis"],
         ),
-        el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Streamgraph"]),
-        el("div", { className: "app-header__breadcrumb" }, ["Enterprise Risk · Component 2"]),
+        el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Event Timeline"]),
+        el("div", { className: "app-header__breadcrumb" }, ["Timeline workspace · Synthetic operational data"]),
       ]),
       el("div", { className: "app-header__stats" }, [
         el("div", { className: "app-header__stat" }, [el("div", { className: "value" }, [String(repository.count())]), el("div", { className: "label" }, ["Total Events"])]),
@@ -136,7 +139,7 @@ function renderStreamgraphPage(repository: EventRepository, aiData: unknown, roo
     el("div", { className: "panel__header" }, [el("span", { className: "panel__title" }, ["Narrative Timeline"])]),
   ]);
   main.append(timelinePanel);
-  renderStreamGraph(ctx, timelinePanel);
+  const cleanupChart = renderStreamGraph(ctx, timelinePanel);
 
   const filterPanel = el("div", { className: "panel" }, [
     el("div", { className: "panel__header" }, [el("span", { className: "panel__title" }, ["Filters & Grouping"])]),
@@ -151,6 +154,7 @@ function renderStreamgraphPage(repository: EventRepository, aiData: unknown, roo
   const drawerHost = el("div", {});
   root.append(drawerHost);
   renderEventDrawer(ctx, drawerHost);
+  return cleanupChart;
 }
 
 boot();

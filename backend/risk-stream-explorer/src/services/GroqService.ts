@@ -3,6 +3,7 @@ import { buildSystemPrompt } from "../prompts/pattern-analysis.prompt.js";
 import { buildIssueSystemPrompt } from "../prompts/issue-analysis.prompt.js";
 import type { GroqFactPayload } from "../types/Pattern.js";
 import type { IssueEvidencePayload } from "../types/Issue.js";
+import type { FallbackReason } from "../types/provenance.js";
 
 /** Minimal surface this service needs from a Groq client — lets tests inject a fake without touching the network. */
 export interface GroqClientLike {
@@ -13,6 +14,11 @@ export interface GroqClientLike {
       }>;
     };
   };
+}
+
+/** Optional per-call overrides. `timeoutMs` can only lower the service timeout (used to honour an overall request budget). */
+export interface CallOptions {
+  timeoutMs?: number;
 }
 
 const RESPONSE_JSON_SCHEMA = {
@@ -93,10 +99,61 @@ export class GroqInvalidJsonError extends Error {
   }
 }
 
+/** Why a provider call failed, in the vocabulary of {@link FallbackReason}. */
+export type ProviderFailureReason = Extract<FallbackReason, "provider-not-configured" | "provider-timeout" | "provider-error">;
+
+/**
+ * Typed transport/provider failure. Routes branch on `reason` instead of
+ * parsing messages: a missing key or a timeout is never retried, and the
+ * reason is surfaced to the client as `fallbackReason` / `AI_UNAVAILABLE.reason`.
+ * The message is the original provider message (never contains the API key).
+ */
+export class AiProviderError extends Error {
+  readonly reason: ProviderFailureReason;
+  readonly status?: number;
+  constructor(reason: ProviderFailureReason, message: string, options?: { status?: number; cause?: unknown }) {
+    super(message);
+    this.name = "AiProviderError";
+    this.reason = reason;
+    if (options?.status !== undefined) this.status = options.status;
+    if (options?.cause !== undefined) (this as { cause?: unknown }).cause = options.cause;
+  }
+}
+
+/** True when the provider produced a response we cannot use (empty / non-JSON) — an output problem, not a transport problem. */
+export function isUnusableOutputError(err: unknown): boolean {
+  return err instanceof GroqEmptyResponseError || err instanceof GroqInvalidJsonError;
+}
+
+function looksLikeTimeout(err: unknown): boolean {
+  const e = err as { name?: unknown; code?: unknown; status?: unknown; message?: unknown } | null;
+  if (!e || typeof e !== "object") return false;
+  if (e.name === "APIConnectionTimeoutError" || e.name === "AbortError" || e.name === "TimeoutError") return true;
+  if (e.code === "ETIMEDOUT" || e.code === "ECONNABORTED" || e.code === "UND_ERR_CONNECT_TIMEOUT" || e.code === "UND_ERR_HEADERS_TIMEOUT" || e.code === "UND_ERR_BODY_TIMEOUT") return true;
+  if (e.status === 408) return true;
+  return typeof e.message === "string" && /\btime(?:d)?[ -]?out\b/i.test(e.message);
+}
+
+/**
+ * Classifies any error thrown by a provider call. Output-shape errors
+ * (empty/non-JSON completion) are returned unchanged so callers can treat
+ * them as a rejected attempt rather than an outage.
+ */
+export function classifyProviderError(err: unknown): AiProviderError | Error {
+  if (err instanceof AiProviderError) return err;
+  if (isUnusableOutputError(err)) return err as Error;
+  const message = (err as Error | null)?.message ?? String(err);
+  const status = (err as { status?: unknown } | null)?.status;
+  const options = { cause: err, ...(typeof status === "number" ? { status } : {}) };
+  return new AiProviderError(looksLikeTimeout(err) ? "provider-timeout" : "provider-error", message, options);
+}
+
 /**
  * True for errors worth one bounded retry: transient network failure, 429,
  * or 5xx. A hard timeout is deliberately not retried — doing so doubles the
- * analyst's wait before the deterministic fallback can render.
+ * analyst's wait before the deterministic fallback can render. (Raw
+ * connection-timeout errors still classify as retryable here; the service
+ * itself checks for timeouts first and never retries them — see `withPolicy`.)
  */
 export function isRetryableGroqError(err: unknown): boolean {
   const status = (err as { status?: unknown } | null)?.status;
@@ -139,36 +196,53 @@ export class GroqService {
     this.client = client ?? (new Groq({ apiKey, maxRetries: 0 }) as unknown as GroqClientLike);
   }
 
+  /** True when a usable API key is present. Checked before any network call. */
+  isConfigured(): boolean {
+    const key = this.apiKey.trim();
+    return key !== "" && !/^<[^>]+>$/.test(key);
+  }
+
   private assertConfigured(): void {
-    if (!this.apiKey || /^<[^>]+>$/.test(this.apiKey.trim())) {
-      throw new Error("No usable LLM API key is configured.");
+    if (!this.isConfigured()) {
+      throw new AiProviderError("provider-not-configured", "No usable LLM API key is configured.");
     }
   }
 
-  async analyzePattern(factPayload: GroqFactPayload): Promise<unknown> {
-    this.assertConfigured();
-    const call = () => this.callOnce(buildSystemPrompt(), factPayload, RESPONSE_JSON_SCHEMA);
+  /**
+   * Runs `call` under the retry policy: a transient failure (429, 5xx,
+   * connection reset) is retried once, but never a timeout, and the retry
+   * only gets whatever is left of the per-request timeout so one request can
+   * never cost more than `timeoutMs` of provider time. Output-shape errors
+   * propagate unchanged; every other failure is rethrown as an `AiProviderError`.
+   */
+  private async withPolicy<T>(call: (timeoutMs: number) => Promise<T>, options?: CallOptions): Promise<T> {
+    const budget = Math.min(this.timeoutMs, options?.timeoutMs ?? this.timeoutMs);
+    const startedAt = Date.now();
     try {
-      return await call();
+      return await call(budget);
     } catch (err) {
-      if (isRetryableGroqError(err)) {
-        return await call();
+      const typed = classifyProviderError(err);
+      if (!(typed instanceof AiProviderError) || typed.reason === "provider-timeout") throw typed;
+      const remaining = budget - (Date.now() - startedAt);
+      if (isRetryableGroqError(err) && remaining > 0) {
+        try {
+          return await call(remaining);
+        } catch (second) {
+          throw classifyProviderError(second);
+        }
       }
-      throw err;
+      throw typed;
     }
   }
 
-  async analyzeIssue(evidencePayload: IssueEvidencePayload): Promise<unknown> {
+  async analyzePattern(factPayload: GroqFactPayload, options?: CallOptions): Promise<unknown> {
     this.assertConfigured();
-    const call = () => this.callOnce(buildIssueSystemPrompt(), evidencePayload, ISSUE_RESPONSE_JSON_SCHEMA);
-    try {
-      return await call();
-    } catch (err) {
-      if (isRetryableGroqError(err)) {
-        return await call();
-      }
-      throw err;
-    }
+    return this.withPolicy((t) => this.callOnce(buildSystemPrompt(), factPayload, RESPONSE_JSON_SCHEMA, t), options);
+  }
+
+  async analyzeIssue(evidencePayload: IssueEvidencePayload, options?: CallOptions): Promise<unknown> {
+    this.assertConfigured();
+    return this.withPolicy((t) => this.callOnce(buildIssueSystemPrompt(), evidencePayload, ISSUE_RESPONSE_JSON_SCHEMA, t), options);
   }
 
   /**
@@ -177,42 +251,50 @@ export class GroqService {
    * Shares this class's client and retry policy so provider configuration
    * stays in exactly one place.
    */
-  async completeText(messages: { role: "system" | "user" | "assistant"; content: string }[]): Promise<string> {
+  async completeText(messages: { role: "system" | "user" | "assistant"; content: string }[], options?: CallOptions): Promise<string> {
     this.assertConfigured();
-    const call = async (): Promise<string> => {
-      const completion = await this.client.chat.completions.create(
-        { model: this.model, temperature: 0.2, max_tokens: 1024, messages },
-        { timeout: this.timeoutMs },
-      );
+    return this.withPolicy(async (timeoutMs) => {
+      const completion = await this.createCompletion({ model: this.model, temperature: 0.2, max_tokens: 1024, messages }, timeoutMs);
       const content = completion.choices?.[0]?.message?.content;
       if (!content) throw new GroqEmptyResponseError();
       return content;
-    };
-
-    try {
-      return await call();
-    } catch (err) {
-      if (isRetryableGroqError(err)) {
-        return await call();
-      }
-      throw err;
-    }
+    }, options);
   }
 
   /** Structured JSON completion for analyst features that render typed sections. */
-  async completeStructured<T>(systemPrompt: string, payload: unknown, jsonSchema: Record<string, unknown>): Promise<T> {
+  async completeStructured<T>(systemPrompt: string, payload: unknown, jsonSchema: Record<string, unknown>, options?: CallOptions): Promise<T> {
     this.assertConfigured();
-    const call = () => this.callOnce(systemPrompt, payload, jsonSchema) as Promise<T>;
+    return this.withPolicy((t) => this.callOnce(systemPrompt, payload, jsonSchema, t) as Promise<T>, options);
+  }
+
+  /**
+   * One provider call with a hard deadline. The SDK `timeout` option is
+   * passed through, but the deadline is also enforced here (and the request
+   * aborted) so a client that ignores it cannot hang the route.
+   */
+  private async createCompletion(
+    params: Record<string, unknown>,
+    timeoutMs: number,
+  ): Promise<{ choices?: Array<{ message?: { content?: string | null } }> }> {
+    const controller = new AbortController();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const deadline = new Promise<never>((_resolve, reject) => {
+      timer = setTimeout(() => {
+        controller.abort();
+        reject(new AiProviderError("provider-timeout", `LLM provider did not respond within ${timeoutMs} ms`));
+      }, timeoutMs);
+    });
+    const request = this.client.chat.completions.create(params, { timeout: timeoutMs, signal: controller.signal });
+    request.catch(() => undefined); // a late rejection after the deadline must not become an unhandled rejection
     try {
-      return await call();
-    } catch (err) {
-      if (isRetryableGroqError(err)) return await call();
-      throw err;
+      return await Promise.race([request, deadline]);
+    } finally {
+      if (timer) clearTimeout(timer);
     }
   }
 
-  private async callOnce(systemPrompt: string, payload: unknown, jsonSchema: Record<string, unknown>): Promise<unknown> {
-    const completion = await this.client.chat.completions.create(
+  private async callOnce(systemPrompt: string, payload: unknown, jsonSchema: Record<string, unknown>, timeoutMs: number): Promise<unknown> {
+    const completion = await this.createCompletion(
       {
         model: this.model,
         temperature: 0.2,
@@ -223,7 +305,7 @@ export class GroqService {
         ],
         response_format: { type: "json_schema", json_schema: jsonSchema },
       },
-      { timeout: this.timeoutMs },
+      timeoutMs,
     );
 
     const content = completion.choices?.[0]?.message?.content;

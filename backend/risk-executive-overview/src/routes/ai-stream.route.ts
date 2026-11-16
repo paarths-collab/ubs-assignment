@@ -19,6 +19,7 @@ import {
 import { ANALYST_SYSTEM_PROMPT } from "../services/AIAnalysisOrchestrator.js";
 import { streamCompletion } from "../services/LlmService.js";
 import { AppError } from "../utils/errors.js";
+import { assertGroundedAnalysis } from "../services/AnalysisSafety.js";
 
 const FOLLOW_UP_CONTEXT_LABELS = {
   kpi: "the KPI cards and their underlying filtered population",
@@ -51,7 +52,23 @@ function openStream(reply: FastifyReply): (event: StreamEvent) => void {
   });
 
   return (event: StreamEvent) => {
-    reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+    if (!reply.raw.destroyed && !reply.raw.writableEnded) reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+  };
+}
+
+/** One budget across all sections, cancelled when the browser disconnects. */
+function streamLifecycle(reply: FastifyReply) {
+  const controller = new AbortController();
+  const expiresAt = Date.now() + 50_000;
+  const cancel = () => controller.abort();
+  const timer = setTimeout(cancel, 50_000);
+  reply.raw.once("close", cancel);
+  return {
+    options: () => {
+      if (controller.signal.aborted || Date.now() >= expiresAt) throw new AppError("AI_UNAVAILABLE", "Analysis request ended.");
+      return { signal: controller.signal, timeoutMs: expiresAt - Date.now() };
+    },
+    dispose: () => { clearTimeout(timer); reply.raw.removeListener("close", cancel); },
   };
 }
 
@@ -79,6 +96,14 @@ function resolveDossier(
     selected = scenarios.find((scenario) => scenario.patternId === selection.patternId);
   } else if (selection.type === "issue") {
     selected = scenarios.find((scenario) => scenario.issueDetail === selection.issueDetail);
+  } else if (selection.type === "eventIds") {
+    // Event IDs identify a complete server-computed scenario, never an
+    // arbitrary client-built evidence package or a broader issue slice.
+    const requestedIds = new Set(selection.eventIds);
+    selected = scenarios.find((scenario) =>
+      scenario.eventIds.length === requestedIds.size &&
+      scenario.eventIds.every((eventId) => requestedIds.has(eventId)),
+    );
   }
 
   if (!selected) {
@@ -131,6 +156,7 @@ async function runFollowUpStream(
 
   const send = openStream(reply);
   const startedAt = Date.now();
+  const lifecycle = streamLifecycle(reply);
   const sectionId = "follow-up-answer";
   const contextLabel = FOLLOW_UP_CONTEXT_LABELS[parsed.context];
   const prompt = `Answer the manager's follow-up question about ${contextLabel}.
@@ -153,9 +179,11 @@ ${JSON.stringify(dossier)}`;
 
   try {
     send({ type: "section_start", sectionId, title: "Answer" });
-    const text = await streamCompletion(ANALYST_SYSTEM_PROMPT, prompt, (delta) => {
-      send({ type: "section_delta", sectionId, delta });
-    }, "low");
+    const chunks: string[] = [];
+    const text = await streamCompletion(ANALYST_SYSTEM_PROMPT, prompt, (delta) => chunks.push(delta), "low", lifecycle.options());
+    assertGroundedAnalysis([text], dossier);
+    lifecycle.options();
+    for (const delta of chunks) send({ type: "section_delta", sectionId, delta });
     send({ type: "section_complete", sectionId, characters: text.length });
     send({
       type: "analysis_complete",
@@ -167,6 +195,7 @@ ${JSON.stringify(dossier)}`;
     log.warn({ err: error }, "AI follow-up stream failed");
     send({ type: "analysis_error", message: "The follow-up assistant is temporarily unavailable. Please retry." });
   } finally {
+    lifecycle.dispose();
     reply.raw.end();
   }
 }
@@ -198,6 +227,7 @@ async function runPortfolioStream(
   const section = PORTFOLIO_ANALYSIS_SECTIONS[lens];
   const send = openStream(reply);
   const startedAt = Date.now();
+  const lifecycle = streamLifecycle(reply);
   const analysisType = `portfolio-${lens}`;
 
   send({
@@ -215,7 +245,7 @@ async function runPortfolioStream(
 
     const text = await runAnalysisSection(section, dossier, (delta) => {
       send({ type: "section_delta", sectionId: section.id, delta });
-    });
+    }, lifecycle.options());
 
     send({ type: "section_complete", sectionId: section.id, characters: text.length });
     send({
@@ -234,6 +264,7 @@ async function runPortfolioStream(
           : "The analysis service is temporarily unavailable. Please retry.",
     });
   } finally {
+    lifecycle.dispose();
     reply.raw.end();
   }
 }
@@ -267,6 +298,7 @@ async function runStream(
 
   const send = openStream(reply);
   const startedAt = Date.now();
+  const lifecycle = streamLifecycle(reply);
 
   send({
     type: "analysis_start",
@@ -284,7 +316,7 @@ async function runStream(
 
       const text = await runAnalysisSection(section, dossier, (delta) => {
         send({ type: "section_delta", sectionId: section.id, delta });
-      });
+      }, lifecycle.options());
 
       send({ type: "section_complete", sectionId: section.id, characters: text.length });
     }
@@ -309,6 +341,7 @@ async function runStream(
           : "The analysis service is temporarily unavailable. Please retry.",
     });
   } finally {
+    lifecycle.dispose();
     reply.raw.end();
   }
 }

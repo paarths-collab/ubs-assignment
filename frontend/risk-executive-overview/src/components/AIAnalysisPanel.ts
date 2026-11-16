@@ -12,7 +12,7 @@ const ACTIONS: Array<{ endpoint: AnalysisEndpoint; label: string; hint: string }
 
 /** Deep analysis of the one currently-selected issue in the Risk Brief. */
 export function renderAIAnalysisPanel(ctx: AppContext, host: HTMLElement): void {
-  const panel = renderStreamingPanel("AI Risk Analysis");
+  const panel = renderStreamingPanel("Issue analysis");
 
   for (const action of ACTIONS) {
     const button = el("button", { type: "button", className: "analysis-btn", title: action.hint }, [
@@ -35,11 +35,11 @@ export function renderAIAnalysisPanel(ctx: AppContext, host: HTMLElement): void 
 
   // A new selection invalidates any analysis on screen — it described the
   // previous issue.
-  let lastScenarioId: string | null = null;
+  let lastEvidenceKey: string | null = null;
   ctx.subscribe(() => {
-    const current = ctx.getSelectedScenario()?.scenarioId ?? null;
-    if (current === lastScenarioId) return;
-    lastScenarioId = current;
+    const current = JSON.stringify({ filters: ctx.getState().filters, scenario: ctx.getSelectedScenario() });
+    if (current === lastEvidenceKey) return;
+    lastEvidenceKey = current;
     panel.reset();
   });
 }

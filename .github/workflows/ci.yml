@@ -35,6 +35,15 @@ jobs:
       - name: Validate data
         run: npm run validate-data
 
+      # build:vercel and the static Pages build both write to dist/ (the
+      # latter empties it first), so the Vercel output is built and checked
+      # before the Pages bundle replaces it.
+      - name: Build Vercel output
+        run: npm run build:vercel
+
+      - name: Check Vercel output
+        run: npm run check:vercel-output
+
       - name: Build frontend
         run: npm run build
 

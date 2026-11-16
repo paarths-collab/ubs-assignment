@@ -1,6 +1,6 @@
 # Executive Risk Overview Backend
 
-Component 1 of a UBS-style synthetic risk-insights proof of concept. This backend calculates all verified facts deterministically from a curated dataset of 1,000 risk events; a Groq LLM (model `openai/gpt-oss-120b`) only explains those facts and never calculates, estimates, or invents numbers, Event IDs, or other factual values.
+The executive analytics API for Signal — Data Analysis. This backend calculates metrics deterministically from a synthetic dataset of 1,000 operational events. The configured AI provider receives server-built evidence for qualitative interpretation; quantitative figures remain in the deterministic analytics panels.
 
 ## Setup
 

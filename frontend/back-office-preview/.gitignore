@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+.env.local
+*.tsbuildinfo
+.DS_Store
+
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+.env*
+!.env.example

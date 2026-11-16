@@ -39,7 +39,7 @@ function colorFor(groupBy: string, key: string, allKeys: string[]): string {
   return CATEGORICAL_PALETTE[idx % CATEGORICAL_PALETTE.length] ?? "#666";
 }
 
-export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void {
+export function renderStreamGraph(ctx: AppContext, container: HTMLElement): () => void {
   const legendEl = el("div", { className: "streamgraph-legend" });
   const hintEl = el("div", { className: "streamgraph-hint" }, [
     "Hover a point for a quick preview · click it to investigate the full period below.",
@@ -81,7 +81,7 @@ export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void
     drawSvg(svgWrap, tooltip, data, periods, filteredEvents, state, ctx);
   }
 
-  ctx.subscribe(draw);
+  const unsubscribe = ctx.subscribe(draw);
   draw();
 
   // The SVG's viewBox is sized from the container's measured pixel width at
@@ -95,6 +95,11 @@ export function renderStreamGraph(ctx: AppContext, container: HTMLElement): void
     resizeFrame = requestAnimationFrame(() => draw());
   });
   resizeObserver.observe(svgWrap);
+  return () => {
+    unsubscribe();
+    resizeObserver.disconnect();
+    if (resizeFrame !== null) cancelAnimationFrame(resizeFrame);
+  };
 }
 
 function renderLegend(

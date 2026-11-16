@@ -1,6 +1,7 @@
 import type { RiskEventsDataset } from "../types/RiskEvent.js";
 import type { RiskPatternsDataset } from "../types/Pattern.js";
 import type { ValidationIssue, ValidationResult } from "./validateDataset.js";
+import { formatMismatch, recomputePatternStatistics } from "./recomputePatternStatistics.js";
 
 const EXPECTED_EVENT_COUNT = 1000;
 const EXPECTED_PATTERN_COUNT = 137;
@@ -103,6 +104,52 @@ export function validateRiskDataset(
     }
   }
 
+  // Statistics are only meaningful once the structural checks above hold.
+  if (!issues.some((issue) => issue.severity === "error")) {
+    issues.push(...validateRiskPatternStatistics(eventsDataset, patternsDataset).issues);
+  }
+
   const hasErrors = issues.some((issue) => issue.severity === "error");
   return { valid: !hasErrors, issues };
+}
+
+/** Maximum number of individual mismatches reported before the rest are summarised. */
+const MAX_REPORTED_MISMATCHES = 50;
+
+/**
+ * Re-derives every precomputed pattern statistic (and the enterprise
+ * baseline) from the raw events and reports each disagreement as an error.
+ * See `recomputePatternStatistics.ts` for the tolerance rules.
+ */
+export function validateRiskPatternStatistics(
+  eventsDataset: RiskEventsDataset,
+  patternsDataset: RiskPatternsDataset,
+): ValidationResult {
+  const issues: ValidationIssue[] = [];
+  try {
+    const report = recomputePatternStatistics(eventsDataset.events, patternsDataset, {
+      eventsFileEnterprise: eventsDataset.enterprise,
+    });
+    for (const mismatch of report.mismatches.slice(0, MAX_REPORTED_MISMATCHES)) {
+      issues.push({ severity: "error", message: `risk_patterns_final.json: statistic mismatch: ${formatMismatch(mismatch)}` });
+    }
+    if (report.mismatches.length > MAX_REPORTED_MISMATCHES) {
+      issues.push({
+        severity: "error",
+        message: `risk_patterns_final.json: ${report.mismatches.length - MAX_REPORTED_MISMATCHES} further statistic mismatches not shown`,
+      });
+    }
+    for (const entry of report.notCheckable) {
+      issues.push({
+        severity: "warning",
+        message: `risk_patterns_final.json: pattern "${entry.patternId}" ${entry.field} not checkable: ${entry.reason}`,
+      });
+    }
+  } catch (error) {
+    issues.push({
+      severity: "error",
+      message: `risk_patterns_final.json: statistics recomputation failed: ${(error as Error).message}`,
+    });
+  }
+  return { valid: !issues.some((issue) => issue.severity === "error"), issues };
 }

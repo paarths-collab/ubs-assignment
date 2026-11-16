@@ -1,8 +1,8 @@
-# Landing — Operational Risk Workbench (`/`)
+# Signal workspace (`/`)
 
-**Purpose.** Orientation, not a dashboard. It explains what the dataset is,
-that it is synthetic, that there are two independent timelines, and routes the
-reader to the right surface for their question.
+**Purpose.** A neutral entry point to Signal — Data Analysis. It introduces
+the synthetic dataset, shows computed summary figures, and opens the analytics,
+timeline, relationships, issues, and pattern investigation screens.
 
 - Renders from the already-loaded streamgraph `EventRepository` — no fetch, no
   spinner.

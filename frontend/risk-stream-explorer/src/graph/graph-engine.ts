@@ -53,13 +53,14 @@ const NETWORK_OPTIONS = {
 };
 
 /**
- * Owns a single vis.Network instance for the lifetime of the app. The
+ * Owns a single vis.Network instance for the lifetime of the page. The
  * Network object itself is never destroyed/recreated on filter or
  * selection changes — only its two DataSets are updated in place, keyed by
  * ID, so repeated exploration cannot duplicate nodes/edges or corrupt state.
  */
 export class GraphEngine {
   private network: Network | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private readonly nodesDataSet = new DataSet<VisNodeInput>([]);
   private readonly edgesDataSet = new DataSet<VisEdgeInput>([]);
   /** Set when the graph content changed and the view should reframe once settled. */
@@ -68,9 +69,11 @@ export class GraphEngine {
 
   mount(container: HTMLElement): void {
     if (this.network) return;
-    this.network = new Network(container, { nodes: this.nodesDataSet, edges: this.edgesDataSet }, NETWORK_OPTIONS);
+    const network = new Network(container, { nodes: this.nodesDataSet, edges: this.edgesDataSet }, NETWORK_OPTIONS);
+    this.network = network;
 
-    this.network.on("stabilizationIterationsDone", () => {
+    network.on("stabilizationIterationsDone", () => {
+      if (this.network !== network) return;
       this.network?.setOptions({ physics: { enabled: false } });
       if (this.pendingFit) {
         this.pendingFit = false;
@@ -84,9 +87,9 @@ export class GraphEngine {
     // layout pass — a network built against a zero-size container keeps a
     // zero-size canvas forever unless it is explicitly re-measured. So on
     // every real size change, force the re-measure and reframe.
-    const resizeObserver = new ResizeObserver((entries) => {
+    this.resizeObserver = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (!this.network || !entry) return;
+      if (this.network !== network || !entry) return;
       const { width, height } = entry.contentRect;
       if (width === 0 || height === 0) return;
 
@@ -97,7 +100,7 @@ export class GraphEngine {
         this.network.fit();
       }
     });
-    resizeObserver.observe(container);
+    this.resizeObserver.observe(container);
   }
 
   /**
@@ -164,7 +167,9 @@ export class GraphEngine {
   }
 
   onSelectNode(handler: (nodeId: string) => void): void {
-    this.network?.on("selectNode", (params: { nodes: string[] }) => {
+    const network = this.network;
+    network?.on("selectNode", (params: { nodes: string[] }) => {
+      if (this.network !== network) return;
       const nodeId = params.nodes[0];
       if (nodeId) handler(nodeId);
     });
@@ -183,7 +188,13 @@ export class GraphEngine {
   }
 
   destroy(): void {
-    this.network?.destroy();
+    clearTimeout(this.fitTimer);
+    this.fitTimer = undefined;
+    this.pendingFit = false;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    const network = this.network;
     this.network = null;
+    network?.destroy();
   }
 }

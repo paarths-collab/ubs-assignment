@@ -8,7 +8,7 @@ export interface RecordedAction extends ActionRequest {
 }
 
 /**
- * Prototype-only, in-memory action log. No real UBS workflow system is
+ * Prototype-only, in-memory action log. No external workflow system is
  * written to — this exists so the frontend can show "action taken"
  * confirmation and so the API shape is realistic enough to later swap in a
  * real service without changing the contract.

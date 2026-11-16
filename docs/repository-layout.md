@@ -1,11 +1,11 @@
 # Repository layout
 
 ```
-UBS/
+signal-data-analysis/
 ├── package.json              npm workspaces root, all dev scripts
-├── vitest.config.ts          one test runner across both workspaces
+├── vitest.config.ts          one test runner across all workspaces
 ├── tsconfig.base.json        shared compiler options
-├── vercel.json               frontend deploy (SPA rewrite)
+├── vercel.json               two frontends + API gateway rewrites
 ├── render.yaml               backend deploy blueprint
 ├── DEPLOY.md                 step-by-step deployment guide
 │
@@ -26,6 +26,15 @@ UBS/
 │   │   ├── types/            10 domain type modules
 │   │   └── utils/            date, format, risk math, slug
 │   └── tests/                26 test files
+│
+├── backend/risk-executive-overview/
+│   ├── data/                 executive analytics source datasets
+│   ├── src/                  deterministic analytics + AI API
+│   └── tests/                backend and provider regressions
+│
+├── frontend/risk-executive-overview/
+│   ├── src/                  /kpi dashboard, filters and analysis panels
+│   └── tests/                state and rendering regressions
 │
 └── frontend/risk-stream-explorer/
     ├── vite.config.ts        single-file bundle, @backend alias

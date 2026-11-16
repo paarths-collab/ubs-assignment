@@ -320,6 +320,23 @@ describe("GroqService", () => {
       expect(result.evidence.patternId).toBeNull();
     });
 
+    it("rejects quantitative prose even if the number occurs in another fact field", async () => {
+      const { generateManagerInsight } = await import("../src/services/LlmService");
+      mockCreateFn.mockResolvedValueOnce({ choices: [{ message: { content: JSON.stringify({
+        whatHappened: "The High rate is 2%.", whyItMatters: "Review the workflow.", whereItSits: "Observed scope.", managementQuestion: "What changed?", suggestedAction: "Review.", evidence: { eventIds: ["SIM-0000001"], patternId: "test_pattern_1" },
+      }) } }] });
+      await expect(generateManagerInsight(getTestFactPackage())).rejects.toMatchObject({ code: "AI_INVALID_RESPONSE" });
+    });
+
+    it.each(["The High rate is .5%.", "The net exposure is ten million USD.", "There were twenty affected transactions."])("does not return or cache an unsupported quantity: %s", async (claim) => {
+      const { generateManagerInsight } = await import("../src/services/LlmService");
+      const answer = { whatHappened: claim, whyItMatters: "Review the workflow.", whereItSits: "Observed scope.", managementQuestion: "What changed?", suggestedAction: "Review.", evidence: { eventIds: ["SIM-0000001"], patternId: "test_pattern_1" } };
+      mockCreateFn.mockResolvedValue({ choices: [{ message: { content: JSON.stringify(answer) } }] });
+      await expect(generateManagerInsight(getTestFactPackage())).rejects.toMatchObject({ code: "AI_INVALID_RESPONSE" });
+      await expect(generateManagerInsight(getTestFactPackage())).rejects.toMatchObject({ code: "AI_INVALID_RESPONSE" });
+      expect(mockCreateFn).toHaveBeenCalledTimes(2);
+    });
+
     it("caches responses and returns cached result on second identical request", async () => {
       // Need a fresh import to get fresh cache
       const { generateManagerInsight: generateInsight } = await import("../src/services/LlmService");

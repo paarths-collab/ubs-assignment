@@ -15,4 +15,4 @@ export const EXPECTED_TOTAL_EVENTS = 1000;
 
 export const DEFAULT_PRIORITY_LIMIT = 5;
 
-export const PROMPT_VERSION = "v1";
+export const PROMPT_VERSION = "v2";

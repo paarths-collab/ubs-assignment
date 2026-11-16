@@ -39,6 +39,7 @@ export interface ScenarioAnalytics {
   severity: {
     counts: Record<string, number>;
     highShare: number;
+    highStillOpen: number;
   };
   workflow: {
     statusCounts: Record<string, number>;

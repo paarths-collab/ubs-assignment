@@ -53,7 +53,8 @@ is no CORS to configure.
 | `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` | — | explicit overrides; win over provider defaults |
 | `PORT` | `3001` | |
 | `CORS_ORIGIN` | localhost dev ports + `null` | comma-separated allowlist; `null` covers `file://` pages |
-| `AI_TIMEOUT_MS` | `15000` | per provider call |
+| `AI_TIMEOUT_MS` | `45000` | per provider call |
+| `AI_TOTAL_BUDGET_MS` | `50000` | total pattern/issue AI request budget |
 | `AI_CACHE_TTL_MS` | `3600000` | 1 hour |
 
 **Frontend** (`frontend/risk-stream-explorer/.env`)
@@ -77,3 +78,11 @@ is no CORS to configure.
 ---
 
 [← Docs index](README.md) · [Project README](../README.md)
+
+
+For the complete gateway/static layout, use `npm run start:local`. `/issues`
+serves Issue Intelligence and `/kpi` serves the separate executive overview.
+Both backends read provider configuration from the process environment in this
+mode; export it in the launching shell. Copying a workspace `.env` alone is
+intended for that workspace's development server. Blank optional provider keys
+are treated as unset, so deterministic endpoints remain available.

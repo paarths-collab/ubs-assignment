@@ -18,6 +18,12 @@ export interface Env {
   PORT: number;
   CORS_ORIGIN: string[];
   AI_TIMEOUT_MS: number;
+  /**
+   * Optional. Overall wall-clock budget for one AI request, covering every
+   * provider attempt (default 50000 ms, inside the 60 s platform limit). A
+   * regeneration attempt is skipped when it could not finish within it.
+   */
+  AI_TOTAL_BUDGET_MS?: number;
   AI_CACHE_TTL_MS: number;
   NODE_ENV: string;
 }
@@ -37,6 +43,8 @@ const DEFAULT_CORS_ORIGIN = "http://localhost:5173,http://localhost:5183,http://
  */
 const DEFAULT_AI_TIMEOUT_MS = 45_000;
 const DEFAULT_AI_CACHE_TTL_MS = 3_600_000;
+/** Whole-request budget across all attempts; kept below the 60s `maxDuration` in vercel.json. */
+export const DEFAULT_AI_TOTAL_BUDGET_MS = 50_000;
 
 function parseOriginList(raw: string): string[] {
   return raw
@@ -71,6 +79,7 @@ export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
       source.CORS_ORIGIN && source.CORS_ORIGIN.length > 0 ? source.CORS_ORIGIN : DEFAULT_CORS_ORIGIN,
     ),
     AI_TIMEOUT_MS: parsePositiveInt(source.AI_TIMEOUT_MS, DEFAULT_AI_TIMEOUT_MS, "AI_TIMEOUT_MS"),
+    AI_TOTAL_BUDGET_MS: parsePositiveInt(source.AI_TOTAL_BUDGET_MS, DEFAULT_AI_TOTAL_BUDGET_MS, "AI_TOTAL_BUDGET_MS"),
     AI_CACHE_TTL_MS: parsePositiveInt(source.AI_CACHE_TTL_MS, DEFAULT_AI_CACHE_TTL_MS, "AI_CACHE_TTL_MS"),
     NODE_ENV: source.NODE_ENV ?? "development",
   };

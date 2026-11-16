@@ -1,3 +1,4 @@
+import type { AnalysisProvenance } from "@backend/types/provenance";
 import { resolveApiBase } from "../services/apiBase";
 
 /**
@@ -49,6 +50,8 @@ export interface AnalyseResponse {
   requestId: string;
   generatedAt: string;
   model: string;
+  /** Older API responses may omit provenance; the UI must not guess their source. */
+  provenance?: AnalysisProvenance;
   verifiedFacts: VerifiedFacts;
   analysis: AiAnalysis;
 }

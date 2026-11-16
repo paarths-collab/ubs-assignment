@@ -1,6 +1,6 @@
 # Documentation index
 
-Architecture and reference docs for the Risk Stream Explorer. Start with
+Architecture and reference docs for Signal — Data Analysis. Start with
 [Architecture](architecture.md) for the system shape, or jump straight to the
 [page guides](pages/README.md) if you want to know what a specific screen does.
 
@@ -9,7 +9,7 @@ Architecture and reference docs for the Risk Stream Explorer. Start with
 | Doc | Covers |
 | --- | --- |
 | [Architecture](architecture.md) | System diagram, the two data-delivery strategies |
-| [Repository layout](repository-layout.md) | Annotated tree of both workspaces |
+| [Repository layout](repository-layout.md) | Annotated tree of all four workspaces |
 | [Data model](data-model.md) | The 5 canonical datasets, enterprise baseline, the 8-node / 12-relation graph model |
 | [AI grounding](ai-grounding.md) | How the LLM is constrained: evidence packages, double validation, hallucination rejection, fallbacks, provider abstraction, prompt contract |
 | [Prompts](prompts.md) | The full text of every system and follow-up prompt sent to the LLM, one section per page |
@@ -19,10 +19,11 @@ Architecture and reference docs for the Risk Stream Explorer. Start with
 | Doc | Route |
 | --- | --- |
 | [Overview & routing](pages/README.md) | — |
-| [Landing](pages/landing.md) | `/` |
+| [Workspace](pages/landing.md) | `/` |
+| [Analytics dashboard](pages/analytics.md) | `/kpi` |
 | [Risk Stream / Streamgraph](pages/streamgraph.md) | `/streamgraph` |
 | [Relationship Network](pages/relationship-network.md) | `/graph` |
-| [Executive Risk Overview](pages/issues.md) | `/issues` |
+| [Issue Intelligence](pages/issues.md) | `/issues` |
 | [Pattern Intelligence](pages/patterns.md) | `/patterns` |
 
 ## Implementation

@@ -1,21 +1,34 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import type { PatternRepository } from "../repositories/PatternRepository.js";
+import type { RiskEventRepository } from "../repositories/RiskEventRepository.js";
 import type { GroqService } from "../services/GroqService.js";
 import type { AICacheService } from "../services/AICacheService.js";
 import type { IssueIntelligenceService } from "../services/IssueIntelligenceService.js";
-import { validateGroqResult, validateGroqIssueResult } from "../services/AIValidationService.js";
+import {
+  generateValidated,
+  validateFollowUpAnswer,
+  validateGroqIssueResult,
+  validateGroqResult,
+  type GenerationOutcome,
+  type ValidationGrounding,
+  type Verdict,
+} from "../services/AIValidationService.js";
+import { checkGrounding, collectResultTexts } from "../services/aiGrounding.js";
 import { buildObservedFacts } from "../services/InvestigationService.js";
 import { buildIssueEvidencePayload } from "../services/IssueIntelligenceService.js";
-import { PROMPT_VERSION } from "../prompts/pattern-analysis.prompt.js";
+import { buildFollowUpSystemPrompt, PROMPT_VERSION } from "../prompts/pattern-analysis.prompt.js";
 import { buildIssueSystemPrompt, ISSUE_PROMPT_VERSION, ISSUE_RESPONSE_JSON_SCHEMA } from "../prompts/issue-analysis.prompt.js";
 import type { AiPatternResponse } from "../types/Investigation.js";
 import type { AiIssueResponse } from "../types/Issue.js";
 import type { IssueProfile } from "../types/Issue.js";
 import type { Pattern } from "../types/Pattern.js";
-import type { Env } from "../config/env.js";
+import { aiGeneratedProvenance, fallbackProvenance, type AnalysisProvenance, type FallbackReason } from "../types/provenance.js";
+import { DEFAULT_AI_TOTAL_BUDGET_MS, type Env } from "../config/env.js";
 
 export interface AiRouteDeps {
   patternRepository: PatternRepository;
+  /** Full event index for the ID guard. Optional so older call sites keep compiling; without it only this request's evidence IDs are treated as real. */
+  eventRepository?: RiskEventRepository;
   groqService: GroqService;
   aiCache: AICacheService;
   env: Env;
@@ -23,12 +36,33 @@ export interface AiRouteDeps {
 
 export interface AiIssueRouteDeps {
   issueIntelligenceService: IssueIntelligenceService;
+  eventRepository?: RiskEventRepository;
+  /** Used to recognise real PAT- IDs; without it the pattern-ID guard is skipped for issue answers. */
+  patternRepository?: PatternRepository;
   groqService: GroqService;
   aiCache: AICacheService;
   env: Env;
 }
 
-/** At most one regeneration attempt when Groq's output fails validation (bad schema or a hallucinated Event ID) — beyond that we fall back rather than keep spending Groq calls on one request. */
+/** Success body of `POST /api/ai/pattern/:patternId` — the existing fields plus `provenance`. */
+export type AiPatternRouteResponse = Extract<AiPatternResponse, { status: "ok" }> & { provenance: AnalysisProvenance };
+/** Success body of `POST /api/ai/issue/:issueId` — the existing fields plus `provenance`. */
+export type AiIssueRouteResponse = Extract<AiIssueResponse, { status: "ok" }> & { provenance: AnalysisProvenance };
+/** Success body of both follow-up routes. */
+export interface AiFollowUpRouteResponse {
+  status: "ok";
+  answer: string;
+  provider: string;
+  model: string;
+  provenance: AnalysisProvenance;
+}
+
+/**
+ * Upper bound on model attempts per request. Only a *validation* failure (bad
+ * schema, unknown/out-of-scope ID, ungrounded figure) earns another attempt;
+ * a missing key, a timeout or a provider error goes straight to the fallback.
+ * Attempts are additionally bounded by AI_TOTAL_BUDGET_MS.
+ */
 const MAX_VALIDATION_ATTEMPTS = 2;
 
 const AI_BODY_LIMIT_BYTES = 2048;
@@ -45,20 +79,6 @@ const FOLLOW_UP_RESPONSE_SCHEMA = {
   },
 } as const;
 
-function followUpPrompt(scope: "pattern" | "issue", question: string): string {
-  return [
-    "You are a senior risk analyst answering a follow-up question about a fully synthetic risk dataset.",
-    `The scope is one ${scope}. Use only the verified JSON evidence package supplied with this request.`,
-    "Give a detailed, practical answer in 2 to 4 short paragraphs or clearly labelled points.",
-    "You may repeat only numbers, dates, names, severities, monetary values, and Event IDs that appear in the evidence package.",
-    "Do not invent facts, do not make causal claims, and describe repeated people or organisations only as workflow concentration, never as blame.",
-    "If the evidence is insufficient, say so plainly. Mention limitations when they matter.",
-    "The dataset is synthetic and correlation does not establish causation.",
-    "Return JSON with exactly one field: answer.",
-    `FOLLOW-UP QUESTION: ${question}`,
-  ].join("\n");
-}
-
 function readFollowUpQuestion(body: unknown): string | null {
   if (!body || typeof body !== "object" || Array.isArray(body)) return null;
   const value = (body as Record<string, unknown>).question;
@@ -67,7 +87,130 @@ function readFollowUpQuestion(body: unknown): string | null {
   return question.length >= 3 && question.length <= 1000 ? question : null;
 }
 
+function totalBudgetMs(env: Env): number {
+  return env.AI_TOTAL_BUDGET_MS ?? DEFAULT_AI_TOTAL_BUDGET_MS;
+}
+
+function eventIdIndex(repository: RiskEventRepository | undefined): string[] {
+  return repository ? repository.getAll().map((event) => event.event_id) : [];
+}
+
+/** Why the model result was not served: a provider failure carries its own reason, otherwise validation failed. */
+function fallbackReasonOf(outcome: Exclude<GenerationOutcome<unknown>, { kind: "valid" }>): FallbackReason {
+  return outcome.kind === "provider-failure" ? outcome.reason : "validation-failed";
+}
+
+/**
+ * Runs the grounding checks over the deterministic fallback text too. The
+ * fallback is built only from verified evidence, so this should always pass;
+ * running it makes that claim checked rather than assumed. `evidence` is the
+ * same payload the model would have been given.
+ */
+function fallbackChecks(texts: string[], evidence: unknown, grounding: ValidationGrounding, allowedEventIds: readonly string[], log: FastifyRequest["log"]): string[] {
+  const result = checkGrounding(texts, {
+    evidence,
+    knownEventIds: grounding.knownEventIds ?? allowedEventIds,
+    allowedEventIds,
+    ...(grounding.knownPatternIds ? { knownPatternIds: grounding.knownPatternIds } : {}),
+    ...(grounding.allowedPatternIds ? { allowedPatternIds: grounding.allowedPatternIds } : {}),
+  });
+  if (!result.ok) log.error({ failures: result.failures }, "ai.fallback.ungrounded");
+  return result.ok ? result.checks : [];
+}
+
+function unavailable(reply: FastifyReply, request: FastifyRequest, reason: FallbackReason): FastifyReply {
+  const message =
+    reason === "provider-not-configured"
+      ? "No AI provider is configured on this server, so follow-up questions are unavailable."
+      : reason === "provider-timeout"
+        ? "The AI provider did not respond in time. Please try again."
+        : "The AI provider returned an error. Please try again.";
+  return reply.code(503).send({ error: { code: "AI_UNAVAILABLE", reason, message, requestId: request.id } });
+}
+
+function invalidResponse(reply: FastifyReply, request: FastifyRequest, failures: string[]): FastifyReply {
+  return reply.code(502).send({
+    error: {
+      code: "AI_RESPONSE_INVALID",
+      message: "The AI follow-up answer could not be verified against the evidence, so it was not returned.",
+      failures,
+      requestId: request.id,
+    },
+  });
+}
+
+/**
+ * Shared follow-up flow for pattern and issue scopes. The user's question is
+ * untrusted: it travels in the user message next to the facts (never in the
+ * system prompt), and the answer is validated exactly like a structured
+ * analysis. There is deliberately no deterministic substitute answer — a
+ * template cannot answer an arbitrary question — so provider outages surface
+ * as 503 and rejected answers as 502, and the rejected text is never returned.
+ */
+async function answerFollowUp(
+  request: FastifyRequest,
+  reply: FastifyReply,
+  input: {
+    scope: "pattern" | "issue";
+    deps: { groqService: GroqService; env: Env };
+    question: string;
+    evidence: unknown;
+    allowedEventIds: readonly string[];
+    grounding: ValidationGrounding;
+    evidenceKind: AnalysisProvenance["evidence"];
+  },
+): Promise<FastifyReply | AiFollowUpRouteResponse> {
+  const { deps, scope } = input;
+  const systemPrompt = buildFollowUpSystemPrompt(scope);
+  const outcome = await generateValidated({
+    call: ({ timeoutMs }) =>
+      deps.groqService.completeStructured<unknown>(
+        systemPrompt,
+        { facts: input.evidence, followUpQuestion: input.question },
+        FOLLOW_UP_RESPONSE_SCHEMA,
+        { timeoutMs },
+      ),
+    validate: (raw) => {
+      const checked = validateFollowUpAnswer(raw, input.allowedEventIds, input.grounding, scope);
+      return checked.valid ? { valid: true, value: checked.answer, checks: checked.checks } : checked;
+    },
+    maxAttempts: MAX_VALIDATION_ATTEMPTS,
+    providerTimeoutMs: deps.env.AI_TIMEOUT_MS,
+    totalBudgetMs: totalBudgetMs(deps.env),
+    onRejected: (info) => request.log.warn({ scope, attempt: info.attempt, failures: info.failures }, "ai.followup.validation_failed"),
+    onProviderFailure: (info) => request.log.warn({ scope, attempt: info.attempt, reason: info.reason, error: info.message }, "ai.followup.provider_error"),
+    onRetrySkipped: (info) => request.log.warn({ scope, ...info }, "ai.followup.retry_skipped"),
+  });
+
+  if (outcome.kind === "valid") {
+    return {
+      status: "ok",
+      answer: outcome.value,
+      provider: deps.env.llm.provider,
+      model: deps.env.llm.model,
+      provenance: aiGeneratedProvenance({
+        evidence: input.evidenceKind,
+        checks: outcome.checks,
+        rejectedAttempts: outcome.rejectedAttempts,
+        ...(outcome.lastRejection ? { lastRejection: outcome.lastRejection } : {}),
+      }),
+    };
+  }
+  if (outcome.kind === "provider-failure") return unavailable(reply, request, outcome.reason);
+  return invalidResponse(reply, request, outcome.failures);
+}
+
 export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void {
+  const knownEventIds = eventIdIndex(deps.eventRepository);
+  const knownPatternIds = deps.patternRepository.getAll().map((p) => p.pattern_id);
+
+  const groundingFor = (pattern: Pattern, evidence: unknown): ValidationGrounding => ({
+    evidence,
+    knownEventIds,
+    knownPatternIds,
+    allowedPatternIds: [pattern.pattern_id],
+  });
+
   app.post<{ Params: { patternId: string }; Body: unknown }>(
     "/api/ai/pattern/:patternId",
     {
@@ -105,58 +248,74 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
 
       const observed = buildObservedFacts(pattern);
       const matchingEventIds = pattern.matching_event_ids;
+      const evidence = pattern.groq_fact_payload;
+      const grounding = groundingFor(pattern, evidence);
 
       const cacheKey = deps.aiCache.key(patternId, deps.env.GROQ_MODEL, PROMPT_VERSION);
-      const cached = deps.aiCache.get<AiPatternResponse & { status: "ok" }>(cacheKey);
+      const cached = deps.aiCache.get<AiPatternRouteResponse>(cacheKey);
       if (cached) {
         request.log.info({ patternId, cacheHit: true }, "ai.pattern");
-        return { ...cached, cached: true } satisfies AiPatternResponse;
+        return { ...cached, cached: true, provenance: { ...cached.provenance, cached: true } } satisfies AiPatternRouteResponse;
       }
 
-      let lastFailureReason = "no attempts made";
-      for (let attempt = 1; attempt <= MAX_VALIDATION_ATTEMPTS; attempt += 1) {
-        const startedAt = Date.now();
-        try {
-          const raw = await deps.groqService.analyzePattern(pattern.groq_fact_payload);
-          const latencyMs = Date.now() - startedAt;
-          const outcome = validateGroqResult(raw, matchingEventIds);
+      const outcome = await generateValidated({
+        call: ({ timeoutMs }) => deps.groqService.analyzePattern(evidence, { timeoutMs }),
+        validate: (raw) => {
+          const checked = validateGroqResult(raw, matchingEventIds, grounding);
+          return checked.valid ? { valid: true, value: checked.result, checks: checked.checks } : checked;
+        },
+        maxAttempts: MAX_VALIDATION_ATTEMPTS,
+        providerTimeoutMs: deps.env.AI_TIMEOUT_MS,
+        totalBudgetMs: totalBudgetMs(deps.env),
+        onRejected: (info) => request.log.warn({ patternId, attempt: info.attempt, latencyMs: info.latencyMs, reason: info.reason }, "ai.pattern.validation_failed"),
+        onProviderFailure: (info) => request.log.warn({ patternId, attempt: info.attempt, reason: info.reason, error: info.message }, "ai.pattern.groq_error"),
+        onRetrySkipped: (info) => request.log.warn({ patternId, ...info }, "ai.pattern.retry_skipped"),
+      });
 
-          if (outcome.valid) {
-            const response: AiPatternResponse = {
-              status: "ok",
-              observed,
-              matchingEventIds,
-              ai: outcome.result,
-              cached: false,
-              provider: deps.env.llm.provider,
-              model: deps.env.llm.model,
-            };
-            deps.aiCache.set(cacheKey, response);
-            request.log.info(
-              { patternId, attempt, latencyMs, model: deps.env.llm.model, promptVersion: PROMPT_VERSION, cacheHit: false, success: true },
-              "ai.pattern",
-            );
-            return response;
-          }
-
-          lastFailureReason = outcome.reason;
-          request.log.warn({ patternId, attempt, latencyMs, reason: outcome.reason }, "ai.pattern.validation_failed");
-        } catch (err) {
-          lastFailureReason = (err as Error).message;
-          request.log.warn({ patternId, attempt, error: lastFailureReason }, "ai.pattern.groq_error");
-        }
+      if (outcome.kind === "valid") {
+        const response: AiPatternRouteResponse = {
+          status: "ok",
+          observed,
+          matchingEventIds,
+          ai: outcome.value,
+          cached: false,
+          provider: deps.env.llm.provider,
+          model: deps.env.llm.model,
+          provenance: aiGeneratedProvenance({
+            evidence: "stored-pattern",
+            checks: outcome.checks,
+            rejectedAttempts: outcome.rejectedAttempts,
+            ...(outcome.lastRejection ? { lastRejection: outcome.lastRejection } : {}),
+          }),
+        };
+        deps.aiCache.set(cacheKey, response);
+        request.log.info(
+          { patternId, attempts: outcome.attempts, model: deps.env.llm.model, promptVersion: PROMPT_VERSION, cacheHit: false, success: true },
+          "ai.pattern",
+        );
+        return response;
       }
 
-      request.log.info({ patternId, model: deps.env.llm.model, promptVersion: PROMPT_VERSION, success: false, reason: lastFailureReason }, "ai.pattern");
+      const reason = fallbackReasonOf(outcome);
+      request.log.info({ patternId, model: deps.env.llm.model, promptVersion: PROMPT_VERSION, success: false, reason }, "ai.pattern");
 
-      const fallback: AiPatternResponse = {
+      // Fallbacks are deliberately never cached: the next request should try the model again.
+      const ai = buildPatternFallback(pattern, reason);
+      const fallback: AiPatternRouteResponse = {
         status: "ok",
         observed,
         matchingEventIds,
-        ai: buildPatternFallback(pattern),
+        ai,
         cached: false,
         provider: deps.env.llm.provider,
         model: "verified-deterministic-fallback",
+        provenance: fallbackProvenance({
+          evidence: "stored-pattern",
+          reason,
+          checks: fallbackChecks(collectResultTexts(ai), evidence, grounding, matchingEventIds, request.log),
+          rejectedAttempts: outcome.rejectedAttempts,
+          ...(outcome.kind === "validation-failed" ? { lastRejection: outcome.failures } : outcome.lastRejection ? { lastRejection: outcome.lastRejection } : {}),
+        }),
       };
       return fallback;
     },
@@ -170,9 +329,15 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
       const pattern = deps.patternRepository.getById(request.params.patternId);
       if (!pattern) return reply.code(404).send({ error: { code: "PATTERN_NOT_FOUND", message: `Pattern "${request.params.patternId}" was not found.`, requestId: request.id } });
       if (!question) return reply.code(400).send({ error: { code: "INVALID_REQUEST", message: "Provide a question between 3 and 1000 characters.", requestId: request.id } });
-      const raw = await deps.groqService.completeStructured<{ answer: string }>(followUpPrompt("pattern", question), pattern.groq_fact_payload, FOLLOW_UP_RESPONSE_SCHEMA);
-      if (!raw || typeof raw.answer !== "string" || raw.answer.trim().length < 20) return reply.code(502).send({ error: { code: "AI_RESPONSE_INVALID", message: "The AI returned an unusable follow-up answer.", requestId: request.id } });
-      return { status: "ok", answer: raw.answer, provider: deps.env.llm.provider, model: deps.env.llm.model };
+      return answerFollowUp(request, reply, {
+        scope: "pattern",
+        deps,
+        question,
+        evidence: pattern.groq_fact_payload,
+        allowedEventIds: pattern.matching_event_ids,
+        grounding: groundingFor(pattern, pattern.groq_fact_payload),
+        evidenceKind: "stored-pattern",
+      });
     },
   );
 }
@@ -180,11 +345,27 @@ export function registerAiRoutes(app: FastifyInstance, deps: AiRouteDeps): void 
 /**
  * `POST /api/ai/issue/:issueId` — Groq interpretation of one issue's
  * deterministic evidence package. Same guarantees as the pattern route
- * above (server-resolved facts only, single bounded regeneration attempt,
- * deterministic fallback, hallucinated-Event-ID rejection): the client may
- * only ever supply the issue slug via the URL.
+ * above (server-resolved facts only, bounded regeneration, deterministic
+ * fallback, ID and figure grounding): the client may only ever supply the
+ * issue slug via the URL.
+ *
+ * Evidence label: an issue profile is *computed* — `IssueIntelligenceService`
+ * derives every number at startup directly from the event records
+ * (`risk_events_final.json`), it is not read from a precomputed file — so
+ * provenance reports `evidence: "computed"` (unlike patterns, which are
+ * `stored-pattern`). The profile's `related_patterns` refs are only pointers
+ * to stored patterns.
  */
 export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDeps): void {
+  const knownEventIds = eventIdIndex(deps.eventRepository);
+  const knownPatternIds = deps.patternRepository?.getAll().map((p) => p.pattern_id);
+
+  const groundingFor = (profile: IssueProfile, evidence: unknown): ValidationGrounding => ({
+    evidence,
+    knownEventIds,
+    ...(knownPatternIds ? { knownPatternIds, allowedPatternIds: profile.relatedPatterns.map((p) => p.pattern_id) } : {}),
+  });
+
   app.post<{ Params: { issueId: string }; Body: unknown }>(
     "/api/ai/issue/:issueId",
     {
@@ -219,72 +400,76 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
 
       const evidence = buildIssueEvidencePayload(profile);
       const matchingEventIds = profile.matchingEventIds;
+      const grounding = groundingFor(profile, evidence);
 
       const cacheKey = deps.aiCache.key(profile.slug, deps.env.GROQ_MODEL, ISSUE_PROMPT_VERSION);
-      const cached = deps.aiCache.get<AiIssueResponse & { status: "ok" }>(cacheKey);
+      const cached = deps.aiCache.get<AiIssueRouteResponse>(cacheKey);
       if (cached) {
         request.log.info({ issueId: profile.slug, cacheHit: true }, "ai.issue");
-        return { ...cached, cached: true } satisfies AiIssueResponse;
+        return { ...cached, cached: true, provenance: { ...cached.provenance, cached: true } } satisfies AiIssueRouteResponse;
       }
 
-      let lastFailureReason = "no attempts made";
-      for (let attempt = 1; attempt <= MAX_VALIDATION_ATTEMPTS; attempt += 1) {
-        const startedAt = Date.now();
-        try {
-          // Routed through the generic `completeStructured` rather than
-          // `GroqService.analyzeIssue` — that method is pinned to the old
-          // 5-field schema on a class this feature does not own. The
-          // provider-neutral prompt/schema for the 9-field synthesis result
-          // live next to each other in issue-analysis.prompt.ts.
-          const raw = await deps.groqService.completeStructured<unknown>(buildIssueSystemPrompt(), evidence, ISSUE_RESPONSE_JSON_SCHEMA);
-          const latencyMs = Date.now() - startedAt;
-          const outcome = validateGroqIssueResult(raw, matchingEventIds);
+      // Routed through the generic `completeStructured` rather than
+      // `GroqService.analyzeIssue` — that method is pinned to the old
+      // 5-field schema on a class this feature does not own. The
+      // provider-neutral prompt/schema for the 9-field synthesis result
+      // live next to each other in issue-analysis.prompt.ts.
+      const outcome = await generateValidated({
+        call: ({ timeoutMs }) => deps.groqService.completeStructured<unknown>(buildIssueSystemPrompt(), evidence, ISSUE_RESPONSE_JSON_SCHEMA, { timeoutMs }),
+        validate: (raw) => {
+          const checked = validateGroqIssueResult(raw, matchingEventIds, grounding);
+          return checked.valid ? { valid: true, value: checked.result, checks: checked.checks } : checked;
+        },
+        maxAttempts: MAX_VALIDATION_ATTEMPTS,
+        providerTimeoutMs: deps.env.AI_TIMEOUT_MS,
+        totalBudgetMs: totalBudgetMs(deps.env),
+        onRejected: (info) => request.log.warn({ issueId: profile.slug, attempt: info.attempt, latencyMs: info.latencyMs, reason: info.reason }, "ai.issue.validation_failed"),
+        onProviderFailure: (info) => request.log.warn({ issueId: profile.slug, attempt: info.attempt, reason: info.reason, error: info.message }, "ai.issue.groq_error"),
+        onRetrySkipped: (info) => request.log.warn({ issueId: profile.slug, ...info }, "ai.issue.retry_skipped"),
+      });
 
-          if (outcome.valid) {
-            const response: AiIssueResponse = {
-              status: "ok",
-              matchingEventIds,
-              ai: outcome.result,
-              cached: false,
-              provider: deps.env.llm.provider,
-              model: deps.env.llm.model,
-            };
-            deps.aiCache.set(cacheKey, response);
-            request.log.info(
-              {
-                issueId: profile.slug,
-                attempt,
-                latencyMs,
-                model: deps.env.llm.model,
-                promptVersion: ISSUE_PROMPT_VERSION,
-                cacheHit: false,
-                success: true,
-              },
-              "ai.issue",
-            );
-            return response;
-          }
-
-          lastFailureReason = outcome.reason;
-          request.log.warn({ issueId: profile.slug, attempt, latencyMs, reason: outcome.reason }, "ai.issue.validation_failed");
-        } catch (err) {
-          lastFailureReason = (err as Error).message;
-          request.log.warn({ issueId: profile.slug, attempt, error: lastFailureReason }, "ai.issue.groq_error");
-        }
+      if (outcome.kind === "valid") {
+        const response: AiIssueRouteResponse = {
+          status: "ok",
+          matchingEventIds,
+          ai: outcome.value,
+          cached: false,
+          provider: deps.env.llm.provider,
+          model: deps.env.llm.model,
+          provenance: aiGeneratedProvenance({
+            evidence: "computed",
+            checks: outcome.checks,
+            rejectedAttempts: outcome.rejectedAttempts,
+            ...(outcome.lastRejection ? { lastRejection: outcome.lastRejection } : {}),
+          }),
+        };
+        deps.aiCache.set(cacheKey, response);
+        request.log.info(
+          { issueId: profile.slug, attempts: outcome.attempts, model: deps.env.llm.model, promptVersion: ISSUE_PROMPT_VERSION, cacheHit: false, success: true },
+          "ai.issue",
+        );
+        return response;
       }
 
-      request.log.info(
-        { issueId: profile.slug, model: deps.env.llm.model, promptVersion: ISSUE_PROMPT_VERSION, success: false, reason: lastFailureReason },
-        "ai.issue",
-      );
+      const reason = fallbackReasonOf(outcome);
+      request.log.info({ issueId: profile.slug, model: deps.env.llm.model, promptVersion: ISSUE_PROMPT_VERSION, success: false, reason }, "ai.issue");
 
-      const fallback: AiIssueResponse = {
+      // Fallbacks are deliberately never cached: the next request should try the model again.
+      const ai = buildIssueFallback(profile, reason);
+      const fallback: AiIssueRouteResponse = {
         status: "ok",
         matchingEventIds,
-        ai: buildIssueFallback(profile),
+        ai,
         cached: false,
         provider: deps.env.llm.provider,
         model: "verified-deterministic-fallback",
+        provenance: fallbackProvenance({
+          evidence: "computed",
+          reason,
+          checks: fallbackChecks(collectResultTexts(ai), evidence, grounding, matchingEventIds, request.log),
+          rejectedAttempts: outcome.rejectedAttempts,
+          ...(outcome.kind === "validation-failed" ? { lastRejection: outcome.failures } : outcome.lastRejection ? { lastRejection: outcome.lastRejection } : {}),
+        }),
       };
       return fallback;
     },
@@ -298,9 +483,16 @@ export function registerIssueAiRoutes(app: FastifyInstance, deps: AiIssueRouteDe
       const profile = deps.issueIntelligenceService.getProfile(request.params.issueId);
       if (!profile) return reply.code(404).send({ error: { code: "ISSUE_NOT_FOUND", message: `Issue "${request.params.issueId}" was not found.`, requestId: request.id } });
       if (!question) return reply.code(400).send({ error: { code: "INVALID_REQUEST", message: "Provide a question between 3 and 1000 characters.", requestId: request.id } });
-      const raw = await deps.groqService.completeStructured<{ answer: string }>(followUpPrompt("issue", question), buildIssueEvidencePayload(profile), FOLLOW_UP_RESPONSE_SCHEMA);
-      if (!raw || typeof raw.answer !== "string" || raw.answer.trim().length < 20) return reply.code(502).send({ error: { code: "AI_RESPONSE_INVALID", message: "The AI returned an unusable follow-up answer.", requestId: request.id } });
-      return { status: "ok", answer: raw.answer, provider: deps.env.llm.provider, model: deps.env.llm.model };
+      const evidence = buildIssueEvidencePayload(profile);
+      return answerFollowUp(request, reply, {
+        scope: "issue",
+        deps,
+        question,
+        evidence,
+        allowedEventIds: profile.matchingEventIds,
+        grounding: groundingFor(profile, evidence),
+        evidenceKind: "computed",
+      });
     },
   );
 }
@@ -312,7 +504,14 @@ function isAcceptableEmptyBody(body: unknown): boolean {
   return Object.keys(body as Record<string, unknown>).length === 0;
 }
 
-function buildPatternFallback(pattern: Pattern): {
+/** Why the template is shown, phrased for the `limitations` field. Always contains "verified deterministic fallback". */
+function fallbackLimitationLead(reason: FallbackReason | undefined): string {
+  return reason === "validation-failed"
+    ? "This is a verified deterministic fallback because the model output could not be verified against the evidence."
+    : "This is a verified deterministic fallback because the configured model was unavailable.";
+}
+
+export function buildPatternFallback(pattern: Pattern, reason?: FallbackReason): {
   strongestFinding: string;
   whyItMayMatter: string;
   supportingEvidence: string;
@@ -338,11 +537,11 @@ function buildPatternFallback(pattern: Pattern): {
       "What source records would confirm or challenge the observed severity, timeliness, and exposure measures?",
     ],
     suggestedControl: pattern.narrative_context.opportunities[0] ?? "Review the relevant workflow control, assign an accountable owner, and monitor the verified metrics for recurrence.",
-    limitations: "This is a verified deterministic fallback because the configured model was unavailable. The data is synthetic, the supporting sample may be small, and correlation does not establish causation; narrative impact figures are not treated as verified metrics.",
+    limitations: `${fallbackLimitationLead(reason)} The data is synthetic, the supporting sample may be small, and correlation does not establish causation; narrative impact figures are not treated as verified metrics.`,
   };
 }
 
-function buildIssueFallback(profile: IssueProfile): {
+export function buildIssueFallback(profile: IssueProfile, reason?: FallbackReason): {
   strongestFinding: string;
   whyItMayMatter: string;
   supportingEvidence: string;
@@ -371,6 +570,6 @@ function buildIssueFallback(profile: IssueProfile): {
       "What control evidence would show that the suggested improvement is operating consistently?",
     ],
     suggestedControl: `Map the affected workflow end-to-end, assign control ownership at each handoff, and monitor the leading verified signal (${signal?.label ?? "issue concentration"}) with a defined review threshold. Validate the control against the matching evidence before treating it as effective.`,
-    limitations: "This is a verified deterministic fallback because the configured model was unavailable. The data is synthetic, some breakdowns may have small samples, correlation does not establish causation, and narrative impact figures are not treated as verified metrics.",
+    limitations: `${fallbackLimitationLead(reason)} The data is synthetic, some breakdowns may have small samples, correlation does not establish causation, and narrative impact figures are not treated as verified metrics.`,
   };
 }

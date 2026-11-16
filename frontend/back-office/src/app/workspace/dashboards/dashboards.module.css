@@ -1,0 +1,39 @@
+.page { min-width: 0; }
+.page button:disabled { opacity: .5; cursor: not-allowed; }
+.workGrid { grid-template-columns: minmax(0, 1fr) 280px; }
+.money { font-size: clamp(20px, 2vw, 24px) !important; white-space: nowrap; }
+.cardGrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.chartCard { min-width: 0; padding: 19px; border: 1px solid var(--border, #e5e7eb); border-radius: 10px; background: var(--surface, #fff); color: var(--primary, #252b34); }
+.cardHeading { display: flex; justify-content: space-between; align-items: center; color: var(--secondary, #747e8c); }
+.cardHeading span { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; }
+.chartCard h3 { margin: 17px 0 7px; font-size: 15px; font-weight: 600; letter-spacing: -.2px; }
+.chartCard p { color: var(--secondary, #747e8c); font-size: 11px; line-height: 1.7; }
+.chartCard > p:first-of-type { min-height: 37px; }
+.chartCard :global(.analysis-plot) { max-width: 100%; overflow: hidden; }
+.chartCard :global(.table-scroll) { max-height: 350px; }
+.chartCard :global(table) { font-size: 11px; }
+.chartCard :global(caption) { padding: 12px 0; text-align: left; color: var(--secondary, #747e8c); font-size: 10px; }
+.chartCard :global(th), .chartCard :global(td) { padding: 9px; max-width: 210px; white-space: normal; overflow-wrap: anywhere; }
+.chartCard [role="tablist"] { display: flex; width: fit-content; gap: 3px; padding: 3px; border: 1px solid var(--border, #e5e7eb); border-radius: 6px; }
+.chartCard [role="tab"] { min-height: 26px; padding: 4px 10px; font-size: 10px; background: transparent; border: 1px solid transparent; color: var(--secondary, #747e8c); border-radius: 4px; }
+.chartCard [aria-selected="true"] { border-color: var(--border, #e5e7eb); color: var(--primary, #252b34); background: var(--raised, #f9fafb); }
+.chartCard details { padding-top: 12px; margin-top: 10px; border-top: 1px solid var(--border, #e5e7eb); font-size: 11px; }
+.chartCard summary { cursor: pointer; color: var(--secondary, #747e8c); }
+.chartCard details p { margin: 9px 0 0; }
+.scopeForm { display: grid; gap: 13px; }
+.scopeForm label { display: grid; gap: 6px; min-width: 0; font-size: 11px; color: var(--secondary, #596270); }
+.scopeForm select, .scopeForm input { width: 100%; min-width: 0; min-height: 35px; padding: 7px; border: 1px solid var(--border, #e5e7eb); border-radius: 6px; background: var(--surface, #fff); color: var(--primary, #252b34); font: inherit; font-size: 11px; }
+.dates { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.dateHint { margin: -5px 0 0; color: var(--secondary, #747e8c); font-size: 10px; line-height: 1.6; }
+.reset { min-height: 28px; padding: 3px; border: 0; background: transparent; color: var(--secondary, #747e8c); font: inherit; font-size: 11px; }
+.formMessage { font-size: 11px; line-height: 1.6; color: var(--secondary, #596270); margin: 0; }
+.formMessage button { border: 0; background: none; font: inherit; text-decoration: underline; padding: 0; }
+.iconButton { display: grid; place-items: center; width: 32px; min-height: 32px; padding: 5px; color: var(--secondary, #747e8c); background: var(--surface, #fff); border: 1px solid var(--border, #e5e7eb); border-radius: 6px; }
+.scopeNotes { margin-top: 20px; padding: 17px; border: 1px solid var(--border, #e5e7eb); border-radius: 9px; background: var(--surface, #fff); }
+.scopeNotes > span { font-size: 9px; letter-spacing: .1em; color: var(--secondary, #747e8c); }
+.scopeNotes p { font-size: 11px; line-height: 1.7; color: var(--secondary, #747e8c); margin: 13px 0 0; }
+.scopeNotes strong { color: var(--primary, #252b34); font-weight: 550; }
+.page :is(button,a,input,select,summary):focus-visible { outline: 2px solid var(--theme-accent, #7e8793); outline-offset: 3px; }
+@media (max-width: 1200px) { .workGrid { grid-template-columns: minmax(0, 1fr) 240px; } .cardGrid { grid-template-columns: 1fr; } }
+@media (max-width: 900px) { .workGrid { grid-template-columns: 1fr; } .workGrid > aside { grid-row: 1; } .scopeForm { grid-template-columns: repeat(3, minmax(0, 1fr)); } .dates { grid-template-columns: 1fr 1fr; grid-column: span 2; } .dateHint { align-self: center; } .scopeNotes { display: none; } .cardGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 650px) { .cardGrid { grid-template-columns: 1fr; } .scopeForm { grid-template-columns: 1fr; } .dates { grid-column: auto; } .chartCard { padding: 15px; } }

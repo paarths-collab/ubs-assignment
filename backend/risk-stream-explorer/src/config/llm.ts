@@ -92,7 +92,7 @@ export function loadLlmConfig(source: NodeJS.ProcessEnv = process.env): LlmConfi
     // GROQ_MODEL is legacy and must never override an OpenRouter model.
     model: firstNonEmpty(source.LLM_MODEL, provider === "groq" ? source.GROQ_MODEL : undefined, defaults.model),
     referer: firstNonEmpty(source.LLM_REFERER, "http://localhost:3001"),
-    title: firstNonEmpty(source.LLM_TITLE, "UBS Operational Risk Workbench"),
+    title: firstNonEmpty(source.LLM_TITLE, "Signal Data Analysis"),
   };
 }
 

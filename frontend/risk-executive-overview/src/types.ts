@@ -191,7 +191,7 @@ export interface ScenarioAnalytics {
     firstOccurrence: string;
     lastOccurrence: string;
   };
-  severity: { counts: Record<string, number>; highShare: number };
+  severity: { counts: Record<string, number>; highShare: number; highStillOpen: number };
   workflow: {
     statusCounts: Record<string, number>;
     stageCounts: Record<string, number>;

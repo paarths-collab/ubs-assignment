@@ -32,7 +32,9 @@ async function consumeStream(url: string, body: unknown, handlers: StreamHandler
       signal,
     });
   } catch (err) {
-    handlers.onError(err instanceof Error ? err.message : "Could not reach the analysis service.");
+    if (!signal?.aborted && (err as Error)?.name !== "AbortError") {
+      handlers.onError(err instanceof Error ? err.message : "Could not reach the analysis service.");
+    }
     return;
   }
 
@@ -45,6 +47,7 @@ async function consumeStream(url: string, body: unknown, handlers: StreamHandler
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
+  let terminal = false;
 
   try {
     for (;;) {
@@ -55,11 +58,11 @@ async function consumeStream(url: string, body: unknown, handlers: StreamHandler
 
       // A chunk can split mid-event, so only complete blocks are dispatched
       // and the remainder stays buffered for the next read.
-      const blocks = buffer.split("\n\n");
+      const blocks = buffer.split(/\r?\n\r?\n/);
       buffer = blocks.pop() ?? "";
 
       for (const block of blocks) {
-        const line = block.split("\n").find((candidate) => candidate.startsWith("data: "));
+        const line = block.split(/\r?\n/).find((candidate) => candidate.startsWith("data: "));
         if (!line) continue;
 
         let event: Record<string, unknown>;
@@ -69,13 +72,23 @@ async function consumeStream(url: string, body: unknown, handlers: StreamHandler
           continue;
         }
 
+        terminal = event.type === "analysis_complete" || event.type === "analysis_error";
         dispatch(event, handlers);
+        // The terminal event completes the protocol even if the transport
+        // stays open; later frames must not mutate an already completed run.
+        if (terminal) return;
       }
     }
+    if (!terminal && !signal?.aborted) {
+      handlers.onError("The analysis stream ended before completion. Please retry.");
+    }
   } catch (err) {
-    if ((err as Error)?.name !== "AbortError") {
+    if (!terminal && !signal?.aborted && (err as Error)?.name !== "AbortError") {
       handlers.onError(err instanceof Error ? err.message : "The analysis stream was interrupted.");
     }
+  } finally {
+    void reader.cancel().catch(() => {});
+    reader.releaseLock();
   }
 }
 

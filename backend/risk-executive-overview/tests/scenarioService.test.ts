@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildScenarioSignals, rankScenarioSignals } from "../src/services/ScenarioService";
+import { buildAttentionCards, buildScenarioSignals, rankScenarioSignals } from "../src/services/ScenarioService";
 import { deriveScenarioTitle } from "../src/config/scenarioTitles";
 import { PRIORITY_THRESHOLDS } from "../src/services/PriorityThresholds";
 import { RiskRepository } from "../src/repositories/RiskRepository";
@@ -450,5 +450,38 @@ describe("ScenarioService - Ranking", () => {
 
     const scenarioIds = ranked.map((s) => s.scenarioId);
     expect(scenarioIds).toEqual([...scenarioIds].sort());
+  });
+});
+
+describe("attention card regressions on the real dataset", () => {
+  const repository = new RiskRepository();
+  function cardsForDay(day: string) {
+    const filters = { ...defaultFilters, dateFrom: day, dateTo: day };
+    const events = repository.getEvents().filter((e) => e.occurrenceDate === day);
+    const signals = buildScenarioSignals(events, repository.getPatterns(), repository.getConfig(), filters);
+    return { signals, cards: buildAttentionCards(signals) };
+  }
+  it("does not compare a net share to potential-impact dollars", () => {
+    const { signals, cards } = cardsForDay("2025-06-17");
+    const card = cards.find((c) => c.lens === "exposure")!;
+    const picked = signals.find((s) => s.scenarioId === card.scenarioId)!;
+    expect(picked.netAmountUsd).toBeCloseTo(30089.62);
+    expect(picked.potentialImpactUsd).toBeCloseTo(34002.01);
+    expect(card.reason).toContain("100.0%");
+  });
+  it("does not describe closed High events as unresolved", () => {
+    const { cards } = cardsForDay("2025-02-02");
+    expect(cards.find((c) => c.lens === "urgency")!.reason).toBe("Largest unresolved backlog in the current selection.");
+    const closedOnly = buildScenarioSignals([makeEvent({ severity: "High", status: "Closed" })], [], makeConfig(), defaultFilters);
+    expect(buildAttentionCards(closedOnly).find((c) => c.lens === "urgency")!.reason).toBe("No unresolved events in the current selection.");
+  });
+  it("uses potential dollars consistently for an entirely non-financial selection", () => {
+    const filters = { ...defaultFilters, eventType: "Non-Financial" as const };
+    const events = repository.getEvents().filter((e) => e.eventType === "Non-Financial");
+    const signals = buildScenarioSignals(events, repository.getPatterns(), repository.getConfig(), filters);
+    const card = buildAttentionCards(signals).find((c) => c.lens === "exposure")!;
+    const picked = signals.find((s) => s.scenarioId === card.scenarioId)!;
+    expect(picked.potentialImpactUsd).toBe(Math.max(...signals.map((s) => s.potentialImpactUsd ?? 0)));
+    expect(card.headline).toContain("Not applicable net");
   });
 });

@@ -1,8 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
-import type { GroqService } from "./GroqService.js";
+import { AiProviderError, GroqEmptyResponseError, classifyProviderError, isUnusableOutputError, type GroqService } from "./GroqService.js";
 import { z } from "zod";
+import { checkGrounding, checkModelGrounding, collectResultTexts, MODEL_PROSE_RULES } from "./aiGrounding.js";
+import { aiGeneratedProvenance, fallbackProvenance, type AnalysisProvenance, type FallbackReason } from "../types/provenance.js";
 
 interface BrainEvent {
   event_id: string;
@@ -141,6 +143,7 @@ export class RelationshipAiService {
     recoveryTotal: number | null;
     recoveryCount: number;
     analysis: RelationshipAnalysis;
+    provenance: AnalysisProvenance;
   }> {
     const selectedNode = selectedNodeId === null ? null : this.nodesById.get(selectedNodeId) ?? null;
     if (selectedNodeId !== null && !selectedNode) throw new RelationshipNodeNotFoundError(selectedNodeId);
@@ -191,6 +194,7 @@ export class RelationshipAiService {
     };
 
     const systemPrompt = [
+      MODEL_PROSE_RULES,
       "You are a risk analyst assistant for a synthetic operational-risk relationship network.",
       "Use only the verified facts supplied by the application. Never invent metrics, event IDs, causal claims, or relationships.",
       "People concentration means workflow concentration, not personal blame. Distinguish observed facts from interpretations.",
@@ -198,16 +202,41 @@ export class RelationshipAiService {
       "Every observation evidenceEventIds value must come from the supplied evidenceEventIds list.",
     ].join("\n");
     let analysis: RelationshipAnalysis;
+    let provenance: AnalysisProvenance;
+    let lastRejection: string[] | undefined;
+    const allowed = new Set(scoped.map((event) => event.event_id));
+    const grounding = {
+      evidence: facts,
+      knownEventIds: this.events.map((event) => event.event_id),
+      allowedEventIds: allowed,
+      knownPatternIds: [],
+    };
     try {
       const modelOutput = await this.llm.completeStructured<unknown>(systemPrompt, { facts, question: question ?? "What should the analyst investigate first?" }, RELATIONSHIP_OUTPUT_SCHEMA);
       const parsed = relationshipOutput.safeParse(modelOutput);
-      if (!parsed.success) throw new Error("AI returned an invalid relationship analysis shape");
-      const allowed = new Set(scoped.map((event) => event.event_id));
-      analysis = {
-        ...parsed.data,
-        observations: parsed.data.observations.map((item) => ({ ...item, evidenceEventIds: item.evidenceEventIds.filter((id) => allowed.has(id)) })),
-      };
-    } catch {
+      if (!parsed.success) {
+        lastRejection = [...new Set(parsed.error.issues.map((issue) => `schema-invalid:${issue.path.join(".") || "root"}`))];
+        throw new Error("AI returned an invalid relationship analysis shape");
+      }
+      const checked = checkModelGrounding(collectResultTexts(parsed.data), grounding);
+      const unsupportedCitations = parsed.data.observations.flatMap((item) => item.evidenceEventIds.filter((id) => !allowed.has(id)));
+      // Reject the entire claim, rather than silently removing its citations.
+      if (!checked.ok || unsupportedCitations.length > 0) {
+        lastRejection = [...new Set([...checked.failures, ...unsupportedCitations.map((id) => `unsupported-citation:${id}`)])];
+        throw new Error("AI returned unverified relationship claims");
+      }
+      analysis = parsed.data;
+      provenance = aiGeneratedProvenance({ evidence: "computed", checks: ["schema", ...checked.checks, "citation-scope"], rejectedAttempts: 0 });
+    } catch (error) {
+      let reason: FallbackReason;
+      if (lastRejection) reason = "validation-failed";
+      else if (isUnusableOutputError(error)) {
+        reason = "validation-failed";
+        lastRejection = [error instanceof GroqEmptyResponseError ? "unusable-output:empty" : "unusable-output:invalid-json"];
+      } else {
+        const failure = classifyProviderError(error);
+        reason = failure instanceof AiProviderError ? failure.reason : "provider-error";
+      }
       const theme = facts.riskThemes[0];
       const cause = facts.rootCauses[0];
       analysis = {
@@ -216,8 +245,16 @@ export class RelationshipAiService {
         interpretations: [{ statement: "The observed grouping may help prioritise workflow review, but it does not establish a causal relationship.", confidence: "low" }],
         investigationQuestions: ["Which process step or system handoff is shared by the selected events?", "Does the concentration remain after stratifying by time, severity, and organisation?"],
         recommendedActions: [{ action: "Review the common workflow and assign a control owner.", reason: "This bounded step can test whether the observed concentration reflects a repeatable control condition." }],
-        limitations: ["Verified deterministic fallback used because the configured model was unavailable.", "The dataset is synthetic; correlation does not establish causation.", "The selected scope may be incomplete or small."],
+        limitations: ["Verified deterministic fallback used because model output was unavailable or could not be verified.", "The dataset is synthetic; correlation does not establish causation.", "The selected scope may be incomplete or small."],
       };
+      const fallbackChecks = checkGrounding(collectResultTexts(analysis), grounding);
+      provenance = fallbackProvenance({
+        evidence: "computed",
+        reason,
+        checks: fallbackChecks.checks,
+        rejectedAttempts: lastRejection ? 1 : 0,
+        ...(lastRejection ? { lastRejection } : {}),
+      });
     }
     return {
       selectedNode,
@@ -234,6 +271,7 @@ export class RelationshipAiService {
       potentialCount: potentialValues.length,
       evidenceEventIds: scoped.map((event) => event.event_id),
       analysis,
+      provenance,
     };
   }
 }

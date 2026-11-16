@@ -1,4 +1,4 @@
-# Executive Risk Overview / Issues (`/issues`)
+# Issue Intelligence (`/issues`)
 
 **Question:** which of the 15 issues deserve attention, and *why*?
 

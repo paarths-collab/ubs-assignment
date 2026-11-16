@@ -36,11 +36,12 @@ export interface StreamingPanelHandle {
 export function renderStreamingPanel(headerLabel: string): StreamingPanelHandle {
   let running = false;
   let controller: AbortController | null = null;
+  let runVersion = 0;
   const sections = new Map<string, SectionView>();
 
   const header = el("div", { className: "analysis__header" }, [
     el("span", {}, [headerLabel]),
-    el("span", { className: "analysis__badge" }, ["LIVE"]),
+    el("span", { className: "analysis__badge" }, ["ON DEMAND"]),
   ]);
   const subject = el("div", { className: "analysis__subject" });
   const buttonRow = el("div", { className: "analysis__actions" });
@@ -98,27 +99,32 @@ export function renderStreamingPanel(headerLabel: string): StreamingPanelHandle 
       resetRun();
       setRunning(true);
       controller = new AbortController();
+      const version = ++runVersion;
 
       void start(
         {
           onStart: (info) => {
+            if (version !== runVersion) return;
             subject.textContent = `${info.title} · ${info.eventCount} matching events · ${info.organisationCount} organisations`;
             buildSections(info.sections);
           },
-          onSectionStart: (sectionId) => setSectionStatus(sectionId, "streaming"),
+          onSectionStart: (sectionId) => { if (version === runVersion) setSectionStatus(sectionId, "streaming"); },
           onDelta: (sectionId, delta) => {
+            if (version !== runVersion) return;
             // Appending a text node avoids re-rendering the section on every
             // token, which would thrash the DOM at streaming speed.
             sections.get(sectionId)?.bodyEl.append(document.createTextNode(delta));
           },
-          onSectionComplete: (sectionId) => setSectionStatus(sectionId, "complete"),
+          onSectionComplete: (sectionId) => { if (version === runVersion) setSectionStatus(sectionId, "complete"); },
           onComplete: (info) => {
+            if (version !== runVersion) return;
             footer.replaceChildren(
               el("span", {}, [`Evidence basis: ${info.evidence.eventCount} events · completed in ${(info.durationMs / 1000).toFixed(1)}s`]),
             );
             setRunning(false);
           },
           onError: (message) => {
+            if (version !== runVersion) return;
             // The section that was mid-stream did not finish — marking it
             // "Complete" would claim an analysis the manager never received.
             for (const [sectionId, view] of sections) {
@@ -134,6 +140,7 @@ export function renderStreamingPanel(headerLabel: string): StreamingPanelHandle 
   }
 
   function reset(): void {
+    ++runVersion;
     controller?.abort();
     setRunning(false);
     resetRun();

@@ -31,6 +31,7 @@ import type { GroqService } from "./GroqService.js";
 import { AIInsightRepository } from "./AIInsightRepository.js";
 import type { InsightPayload } from "../types/AIInsight.js";
 import type { StreamEvent } from "../types/Event.js";
+import { checkModelGrounding, MODEL_PROSE_RULES } from "./aiGrounding.js";
 
 export class StreamgraphPeriodNotFoundError extends Error {
   constructor(periodId: string) {
@@ -154,8 +155,11 @@ export class StreamgraphAiService {
     focusSection?: string,
   ): Promise<string> {
     try {
-      const text = await this.llm.completeText(this.buildPeriodPrompt(intent, granularity, periodId, filters, question, focusSection));
+      const evidence = this.buildPeriodPrompt(intent, granularity, periodId, filters);
+      const messages = this.buildPeriodPrompt(intent, granularity, periodId, filters, question, focusSection);
+      const text = await this.llm.completeText(withModelRules(messages));
       if (!isCompleteNarrative(text)) throw new Error("AI returned an incomplete narrative");
+      this.assertGrounded(text, evidence);
       return text;
     } catch (error) {
       // The verified narrative is a complete, deterministic fallback for any
@@ -171,14 +175,33 @@ export class StreamgraphAiService {
 
   async analyseEvent(intent: EventInsightIntent, eventId: string, filters: FilterState, question?: string, focusSection?: string): Promise<string> {
     try {
-      const text = await this.llm.completeText(this.buildEventPrompt(intent, eventId, filters, question, focusSection));
+      const evidence = this.buildEventPrompt(intent, eventId, filters);
+      const messages = this.buildEventPrompt(intent, eventId, filters, question, focusSection);
+      const text = await this.llm.completeText(withModelRules(messages));
       if (!isCompleteNarrative(text)) throw new Error("AI returned an incomplete narrative");
+      this.assertGrounded(text, evidence);
       return text;
     } catch (error) {
       if (error instanceof StreamgraphEventNotFoundError) throw error;
       return formatVerifiedInsight(this.verifiedFallback.getEventInsight(intent, eventId, filters));
     }
   }
+
+  private assertGrounded(text: string, evidence: ChatMessage[]): void {
+    const checked = checkModelGrounding([text], {
+      evidence: evidence.map((message) => message.content),
+      knownEventIds: this.repository.getAll().map((event) => event.eventId),
+      allowedEventIds: [],
+      knownPatternIds: [],
+    });
+    if (!checked.ok) throw new Error("AI returned unverified claims");
+  }
+}
+
+function withModelRules(messages: ChatMessage[]): ChatMessage[] {
+  return messages.map((message) => message.role === "system"
+    ? { ...message, content: `${message.content}\n\n${MODEL_PROSE_RULES}` }
+    : message);
 }
 
 function addFollowUp(messages: ChatMessage[], question?: string, focusSection?: string): ChatMessage[] {

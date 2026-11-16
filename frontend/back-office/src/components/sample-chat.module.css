@@ -1,0 +1,37 @@
+.chat{display:flex;flex-direction:column;min-height:0;height:100%;padding:0 16px 12px;background:#fff;color:#171717;font:inherit}.chat>header{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:#737373;padding:5px 0;border-bottom:1px solid #eee}.chat>header>span{display:flex;align-items:center;gap:6px}.chat i{display:block;width:5px;height:5px;background:#76a18a;border-radius:50%}.chat>header>div{display:flex;gap:5px}.chat>header button,.chat>header a{display:grid;place-items:center;min-height:27px;width:27px;background:#fff;border:1px solid #ededed;border-radius:6px;padding:0;color:#737373}.messages{flex:1;overflow:auto;min-height:80px;max-height:270px;padding:13px 0;scrollbar-width:thin}.welcome strong{font-size:13px;line-height:1.4;letter-spacing:-.2px;display:block;font-weight:600}.welcome p{font-size:11px;color:#737373;line-height:1.5;margin:6px 0 10px}.welcome>div{display:flex;flex-wrap:wrap;gap:5px}.welcome button{padding:5px 7px;min-height:25px;font-size:10px;background:#fff;border:1px solid #e8e8e8;border-radius:5px;color:#666}.messages article{font-size:12px;line-height:1.55;margin-bottom:15px}.question{background:#f5f5f5;border-radius:7px;padding:8px 10px;margin:0 0 10px 20px;color:#404040}.reply>p{margin:0 0 8px}.reply table{width:100%;border-collapse:collapse;font-size:11px;margin:9px 0}.reply th,.reply td{padding:6px;border-bottom:1px solid #eee;text-align:left}.reply th{font-weight:400}.reply td{text-align:right;font-variant-numeric:tabular-nums}.reply details{font-size:10px;color:#737373}.reply summary{cursor:pointer}.reply details p{line-height:1.6}.copy{display:flex;align-items:center;gap:4px;border:0;background:transparent;color:#888;min-height:25px;font-size:10px;padding:3px 0}.composer{background:#1c1c1e;border:1px solid #303033;border-radius:10px;padding:9px;color:#dedede;box-shadow:0 3px 10px #0000000b}.composer textarea{resize:none;border:0;background:transparent;color:#f4f4f5;width:100%;min-height:50px;outline:0;font:inherit;font-size:12px;line-height:1.5;padding:3px 4px;box-shadow:none;border-radius:0}.composer textarea::placeholder{color:#939398}.composer:focus-within{outline:2px solid #d99c7d;outline-offset:2px}.composer>div{display:flex;align-items:center;gap:6px}.composer button{width:26px;min-height:26px;display:grid;place-items:center;padding:0;border:1px solid #37373c;background:#252527;color:#a1a1aa;border-radius:6px}.composer button:disabled{opacity:.4}.composer button[type=submit]{margin-left:auto;color:#fff;background:var(--home-accent,#e85c25);border-color:transparent}.composer span{display:flex;align-items:center;gap:4px;min-width:0;max-width:165px;text-overflow:ellipsis;overflow:hidden;white-space:nowrap;color:#aaa;font-size:9px}.note{font-size:9px;line-height:1.5;color:#737373;min-height:14px;margin:7px 0 0}.file{position:absolute;width:1px;height:1px;clip:rect(0,0,0,0);overflow:hidden}.chat :is(button,a):focus-visible{outline:2px solid #b66d48;outline-offset:3px}@media(max-width:700px){.chat{min-height:300px;padding:0 20px 17px}.messages{min-height:125px;max-height:300px}.welcome strong{font-size:15px}.welcome p,.messages article{font-size:13px}.welcome button{font-size:11px;min-height:29px}.composer textarea{font-size:14px;min-height:65px}.composer button{width:30px;min-height:30px}.note{font-size:10px}.composer span{font-size:10px;max-width:220px}}
+
+/* Conversation feedback and restrained input motion. */
+.messages article{animation:messageEnter 220ms cubic-bezier(.2,.7,.3,1) both}
+.composer{transition:border-color 160ms ease,box-shadow 180ms ease,transform 160ms ease}
+.composer:focus-within{border-color:color-mix(in srgb,var(--home-accent,#e85c25) 55%,#303033);outline-color:var(--home-accent,#e85c25);box-shadow:0 0 0 3px color-mix(in srgb,var(--home-accent,#e85c25) 12%,transparent),0 4px 14px #0000000d;transform:translateY(-1px)}
+.welcome button{transition:transform 160ms ease,border-color 160ms ease,background-color 160ms ease,box-shadow 160ms ease}
+.welcome button:hover{transform:translateY(-2px);border-color:#cfcfcf;background:#fdfdfd;box-shadow:0 3px 8px #00000008}
+.welcome button:active{transform:translateY(0);box-shadow:none}
+.chat>header :is(button,a),.composer button,.copy{transition:background-color 140ms ease,border-color 140ms ease,color 140ms ease,box-shadow 140ms ease}
+.composer button[type=submit]>svg{transition:transform 140ms ease,opacity 140ms ease}
+.composer button[type=submit]:hover:not(:disabled){box-shadow:0 2px 7px #0000001a}
+.composer button[type=submit]:hover:not(:disabled)>svg{transform:translateY(-1px)}
+.composer button[type=submit]:active:not(:disabled)>svg{transform:translateY(-2px) scale(.94)}
+.reply details[open]>p{animation:chatDetailEnter 160ms ease both}
+.note:not(:empty){animation:chatFeedbackEnter 180ms ease both}
+@keyframes messageEnter{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@keyframes chatDetailEnter{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
+@keyframes chatFeedbackEnter{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .messages article,.reply details[open]>p,.note:not(:empty){animation:none}
+  .composer,.welcome button,.chat>header :is(button,a),.composer button,.composer button[type=submit]>svg,.copy{transition:none}
+  .composer:focus-within,.welcome button:hover,.welcome button:active,.composer button[type=submit]:hover:not(:disabled)>svg,.composer button[type=submit]:active:not(:disabled)>svg{transform:none}
+}
+:global(main[data-home-motion="reduced"]) .composer:focus-within,:global(main[data-home-motion="reduced"]) .welcome button:hover,:global(main[data-home-motion="reduced"]) .welcome button:active,:global(main[data-home-motion="reduced"]) .composer button[type=submit]:hover:not(:disabled)>svg,:global(main[data-home-motion="reduced"]) .composer button[type=submit]:active:not(:disabled)>svg{transform:none}
+
+/* Shared light/dark appearance tokens. */
+
+.chat,.messages,.chat .composer{background:var(--surface);border-color:var(--border);color:var(--primary)}.welcome strong,.reply strong{color:var(--primary)}.welcome p,.note,.reply,.file{color:var(--secondary)}.question{background:var(--raised);border-color:var(--border);color:var(--primary)}.welcome button,.copy{background:var(--surface);border-color:var(--border);color:var(--secondary)}.composer textarea{background:transparent;color:var(--primary)}.composer button{background:var(--raised);border-color:var(--border);color:var(--secondary)}.composer button[type=submit]:not(:disabled){background:var(--theme-accent);border-color:var(--theme-accent);color:var(--accent-foreground)}.messages th,.messages td{border-color:var(--border);color:var(--secondary)}
+
+.chat>header{border-color:var(--border);color:var(--secondary)}
+.chat>header :is(button,a){background:var(--raised);border-color:var(--border);color:var(--secondary)}
+.chat>header :is(button,a):hover,.welcome button:hover{background:var(--raised);border-color:var(--border-strong);color:var(--primary)}
+.welcome button{background:var(--surface);border-color:var(--border);color:var(--secondary)}
+.composer textarea::placeholder{color:var(--muted)}
+
+@media(min-width:701px){.chat .composer textarea{min-height:34px}}

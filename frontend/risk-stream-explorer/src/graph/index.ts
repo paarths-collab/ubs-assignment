@@ -50,9 +50,11 @@ const AI_WHY_QUESTION =
 /**
  * Renders the Risk Relationship Network page into the given host element.
  * The whole component lives inside a single `.graph-page` container so its
- * styles stay scoped and cannot leak into the rest of the workbench.
+ * styles stay scoped and cannot leak into the rest of the workspace.
+ * Returns an idempotent cleanup to call before leaving the route.
  */
-export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, homeHref: string): void {
+export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, homeHref: string): () => void {
+  let disposed = false;
   const appRoot = document.createElement("div");
   appRoot.className = "graph-page";
   host.innerHTML = "";
@@ -68,8 +70,8 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   appRoot.innerHTML = `
   <header class="app-header">
-    <a class="graph-back" href="${homeHref}" id="graph-back">← Workbench</a>
-    <h1>Risk Relationship Network</h1>
+    <a class="graph-back" href="${homeHref}" id="graph-back">← Signal · Data Analysis</a>
+    <h1>Relationship Analysis</h1>
     <span class="synthetic-badge">Synthetic / Training Data</span>
     <div class="search-box">
       <input type="text" id="search-input" placeholder="Search event, person, organisation, issue, root cause…" aria-label="Search risk entities" autocomplete="off" />
@@ -467,6 +469,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   /** Applies a mutation to the flow's view options (view mode / show events / revealed columns) without touching the root or breadcrumb. */
   function updateFlow(mutate: (flow: FlowUIState) => void): void {
+    if (disposed) return;
     store.setState((state) => {
       const flow: FlowUIState = { ...state.flow, revealedLevels: new Set(state.flow.revealedLevels) };
       mutate(flow);
@@ -479,6 +482,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   /** Sets the flow's root and breadcrumb together — the one place root changes happen, so every dependent view re-renders in lockstep. */
   function applyRoot(nodeId: string | null, breadcrumb: BreadcrumbEntry[]): void {
+    if (disposed) return;
     store.setState((state) => ({
       ...state,
       flow: { ...state.flow, rootId: nodeId, revealedLevels: new Set() },
@@ -496,6 +500,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   /** Entering an investigation from a priority chip: sets the priority flow and narrows scope to it, with no drill yet. */
   function selectPriorityFlow(flow: PriorityFlow): void {
+    if (disposed) return;
     if (flow.eventIds.length === 0) return;
     store.setState((state) => ({
       ...state,
@@ -523,6 +528,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
    * there. Used by the "All events" chip and the synthetic breadcrumb entry.
    */
   function clearPriorityFlow(): void {
+    if (disposed) return;
     store.setState((state) => ({
       ...state,
       priorityFlow: null,
@@ -542,6 +548,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   /** Drilling into a new entity — appends to the breadcrumb. Used by search, node clicks, and table/AI evidence links. */
   function selectRoot(nodeId: string | null): void {
+    if (disposed) return;
     const state = store.getState();
     if (nodeId === state.flow.rootId) return;
     if (nodeId === null) {
@@ -586,6 +593,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
    * flow, since narrowing within a chosen flow is the normal way to work.
    */
   function applyFilters(next: FilterState, rerenderPanel = false, alsoClearPriorityFlow = false): void {
+    if (disposed) return;
     store.setState((state) => {
       const priorityFlow = alsoClearPriorityFlow ? null : state.priorityFlow;
       return { ...state, filters: next, priorityFlow, filteredEventIds: computeEffectiveEventIds(next, priorityFlow) };
@@ -620,6 +628,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
   function renderFilters(): void {
     renderFilterPanel(filterGroupsEl, data, () => store.getState().filters, {
       onChange: (next) => {
+        if (disposed) return;
         // Record the selection immediately so rapid successive ticks each
         // build on the previous one; only the expensive recompute and
         // re-render are debounced.
@@ -672,6 +681,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
   let aiHasContent = false;
 
   async function runAnalysis(): Promise<void> {
+    if (disposed) return;
     const state = store.getState();
     const eventIds = currentTableEventIds(state);
 
@@ -694,13 +704,13 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
         aiController.signal,
       );
 
-      if (sequence !== aiRequestSequence) return; // scope moved on; discard
+      if (disposed || sequence !== aiRequestSequence) return; // scope moved on; discard
       renderAiResult(aiResultEl, result, (eventId) => selectRoot(`event::${eventId}`));
       aiHasContent = true;
       aiController = null;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
-      if (sequence !== aiRequestSequence) return;
+      if (disposed || sequence !== aiRequestSequence) return;
 
       const message =
         error instanceof AiRequestError
@@ -708,7 +718,8 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
           : "AI analysis is unavailable. Deterministic investigation tools remain available.";
       renderAiMessage(aiResultEl, message, "error");
     } finally {
-      if (sequence === aiRequestSequence) {
+      if (!disposed && sequence === aiRequestSequence) {
+        aiController = null;
         btnAnalyse.disabled = false;
         btnAnalyse.textContent = "Analyse this scope";
       }
@@ -719,6 +730,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   /** Any scope change invalidates an in-flight analysis and the result on screen. */
   function invalidateAnalysis(): void {
+    if (disposed) return;
     const wasInFlight = aiController !== null;
     if (aiController) {
       aiController.abort();
@@ -761,6 +773,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
   }
 
   function renderSearchResults(query: string): void {
+    if (disposed) return;
     if (query.trim().length === 0) {
       searchResultsEl.hidden = true;
       searchResultsEl.replaceChildren();
@@ -808,6 +821,7 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
 
   let searchDebounce: ReturnType<typeof setTimeout> | undefined;
   searchInput.addEventListener("input", () => {
+    if (disposed) return;
     clearTimeout(searchDebounce);
     const value = searchInput.value;
     searchDebounce = setTimeout(() => renderSearchResults(value), SEARCH_DEBOUNCE_MS);
@@ -843,4 +857,17 @@ export function renderGraphPage(host: HTMLElement, onNavigateHome: () => void, h
   // return to All events explicitly.
   const firstPriorityFlow = priorityFlows.find((flow) => flow.eventIds.length > 0);
   if (firstPriorityFlow) selectPriorityFlow(firstPriorityFlow);
+
+  return () => {
+    if (disposed) return;
+    disposed = true;
+    // Invalidate before aborting: even a provider that resolves after abort
+    // must not render into the old page or reset its loading controls.
+    aiRequestSequence += 1;
+    aiController?.abort();
+    aiController = null;
+    clearTimeout(filterDebounce);
+    clearTimeout(searchDebounce);
+    graphEngine.destroy();
+  };
 }

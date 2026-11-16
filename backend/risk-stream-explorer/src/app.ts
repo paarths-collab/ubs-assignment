@@ -38,6 +38,9 @@ export interface AppDependencies {
   serveBuiltFrontend: boolean;
   /** Overridable so tests can supply an in-memory streamgraph dataset. */
   streamgraphAiService: StreamgraphAiService | null;
+  /** Explicit asset locations for bundled server runtimes. */
+  dataDir: string;
+  graphDataDir: string;
 }
 
 /**
@@ -48,9 +51,10 @@ export interface AppDependencies {
 function createStreamgraphAiService(
   groqService: GroqService,
   app: FastifyInstance,
+  dataDir: string,
 ): StreamgraphAiService | null {
   try {
-    return new StreamgraphAiService(loadStreamgraphRepository(defaultDataDir()), groqService);
+    return new StreamgraphAiService(loadStreamgraphRepository(dataDir), groqService);
   } catch (err) {
     app.log.warn(
       { error: (err as Error).message },
@@ -115,7 +119,8 @@ function resolveBuiltFrontend(): { dir: string; file: string } | null {
  */
 export async function buildApp(overrides: Partial<AppDependencies> = {}): Promise<FastifyInstance> {
   const env = overrides.env ?? loadEnv();
-  const dataset = overrides.dataset ?? loadRiskDatasetFromDisk(defaultDataDir());
+  const dataDir = overrides.dataDir ?? defaultDataDir();
+  const dataset = overrides.dataset ?? loadRiskDatasetFromDisk(dataDir);
 
   if (!env.llm.apiKey) {
     // Deterministic routes work fine without a key; only /api/ai/* degrades
@@ -189,8 +194,8 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   registerInvestigationRoutes(app, investigationService);
   registerIssueRoutes(app, issueIntelligenceService, dataset.patternRepository);
   registerEventRoutes(app, dataset.eventRepository);
-  registerAiRoutes(app, { patternRepository: dataset.patternRepository, groqService, aiCache, env });
-  registerIssueAiRoutes(app, { issueIntelligenceService, groqService, aiCache, env });
+  registerAiRoutes(app, { patternRepository: dataset.patternRepository, eventRepository: dataset.eventRepository, groqService, aiCache, env });
+  registerIssueAiRoutes(app, { issueIntelligenceService, eventRepository: dataset.eventRepository, patternRepository: dataset.patternRepository, groqService, aiCache, env });
 
   // Component 2's timeline analyst. Loaded lazily so a missing streamgraph
   // dataset degrades to "this one route is absent" rather than failing the
@@ -200,7 +205,7 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   const streamgraphService =
     "streamgraphAiService" in overrides
       ? overrides.streamgraphAiService
-      : createStreamgraphAiService(groqService, app);
+      : createStreamgraphAiService(groqService, app, dataDir);
   if (streamgraphService) {
     registerStreamgraphAiRoutes(app, streamgraphService);
   }
@@ -209,7 +214,7 @@ export async function buildApp(overrides: Partial<AppDependencies> = {}): Promis
   // also bundled into the visualisation. The server reads the same canonical
   // files so the model never receives client-supplied facts.
   try {
-    registerRelationshipAiRoutes(app, new RelationshipAiService(groqService, graphDataDir()), env.llm.model);
+    registerRelationshipAiRoutes(app, new RelationshipAiService(groqService, overrides.graphDataDir ?? graphDataDir()), env.llm.model);
   } catch (err) {
     app.log.warn({ error: (err as Error).message }, "relationship graph dataset unavailable — /api/ai/analyse will not be registered");
   }

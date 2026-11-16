@@ -57,6 +57,7 @@ function buildAnalytics(
     severity: {
       counts: groupCounts(events, (event) => event.severity),
       highShare: events.length === 0 ? 0 : highSeverityCount / events.length,
+      highStillOpen: countWhere(events, (event) => event.severity === "High" && !excludedStatuses.has(event.status)),
     },
     workflow: {
       statusCounts: groupCounts(events, (event) => event.status),
@@ -292,8 +293,12 @@ export function buildAttentionCards(scenarios: ScenarioSignal[]): AttentionCard[
   const best = (score: (signal: ScenarioSignal) => number): ScenarioSignal =>
     [...scenarios].sort((a, b) => score(b) - score(a) || a.scenarioId.localeCompare(b.scenarioId))[0] as ScenarioSignal;
 
-  const urgency = best((s) => s.highSeverityCount * 1000 + s.openEventCount);
-  const exposure = best((s) => s.analytics.concentration.shareOfFilteredNetExposure ?? s.potentialImpactUsd ?? 0);
+  const urgency = best((s) => s.analytics.severity.highStillOpen * 1000 + s.openEventCount);
+  // Pick one measure for the entire population; ratios and dollars cannot
+  // share a ranking. Potential impact is the fallback only when no net
+  // exposure is applicable anywhere in the selection.
+  const hasNetExposure = scenarios.some((s) => s.netAmountUsd != null);
+  const exposure = best((s) => hasNetExposure ? s.netAmountUsd ?? -Infinity : s.potentialImpactUsd ?? -Infinity);
   const recurrence = best((s) => s.analytics.recurrence.organisationCount * 1000 + s.analytics.recurrence.ownerCount);
 
   const netShare = exposure.analytics.concentration.shareOfFilteredNetExposure;
@@ -305,18 +310,22 @@ export function buildAttentionCards(scenarios: ScenarioSignal[]): AttentionCard[
       title: urgency.title,
       headline: `${urgency.highSeverityCount} High · ${urgency.openEventCount} open · ${urgency.eventCount} events`,
       reason:
-        urgency.highSeverityCount > 0
+        urgency.analytics.severity.highStillOpen > 0
           ? "High-severity events remain unresolved."
-          : "Largest unresolved backlog in the current selection.",
+          : urgency.openEventCount > 0
+            ? "Largest unresolved backlog in the current selection."
+            : "No unresolved events in the current selection.",
     },
     {
       lens: "exposure",
       scenarioId: exposure.scenarioId,
       title: exposure.title,
-      headline: `${formatCompactUsd(exposure.netAmountUsd ?? 0)} net · ${formatCompactUsd(exposure.potentialImpactUsd ?? 0)} potential`,
+      headline: `${exposure.netAmountUsd == null ? "Not applicable" : formatCompactUsd(exposure.netAmountUsd)} net · ${exposure.potentialImpactUsd == null ? "Not applicable" : formatCompactUsd(exposure.potentialImpactUsd)} potential`,
       reason:
-        netShare != null
-          ? `Represents ${(netShare * 100).toFixed(1)}% of filtered net exposure.`
+        hasNetExposure
+          ? netShare != null
+            ? `Represents ${(netShare * 100).toFixed(1)}% of filtered net exposure.`
+            : "Largest recorded net exposure in the current selection."
           : "Largest potential impact in the current selection.",
     },
     {

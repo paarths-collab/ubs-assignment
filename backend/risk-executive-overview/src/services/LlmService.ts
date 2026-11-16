@@ -7,6 +7,8 @@ import {
   type ManagerInsightResponse,
 } from "../schemas/ai.schema.js";
 import type { AiFactPackage } from "../types/AiFactPackage.js";
+import { assertGroundedAnalysis, withLlmDeadline, type LlmCallOptions } from "./AnalysisSafety.js";
+import { MODEL_PROSE_RULES, collectResultTexts } from "../../../risk-stream-explorer/src/services/aiGrounding.js";
 import { AppError } from "../utils/errors.js";
 import {
   completeOpenRouterJson,
@@ -47,7 +49,9 @@ The evidence object is checked against the supplied facts and the whole response
 - evidence.eventIds may contain only Event IDs that appear verbatim in VERIFIED_FACTS.eventIds.
 - evidence.patternId must be exactly the value of VERIFIED_FACTS.patternId. When that value is null, return null — never substitute an ID, a label, or an empty string.
 
-Return only the requested JSON structure.`;
+Return only the requested JSON structure.
+
+${MODEL_PROSE_RULES}`;
 
 let client: Groq | null = null;
 
@@ -132,45 +136,49 @@ export async function streamCompletion(
   userPrompt: string,
   onDelta: (text: string) => void,
   reasoningEffort: "low" | "medium" | "high" = env.GROQ_REASONING_EFFORT,
+  options: LlmCallOptions = {},
 ): Promise<string> {
   if (activeProvider() === "openrouter") {
-    return streamOpenRouter(systemPrompt, userPrompt, onDelta);
+    return streamOpenRouter(`${systemPrompt}\n${MODEL_PROSE_RULES}`, userPrompt, onDelta, options);
   }
 
   const groq = getClient();
   let full = "";
 
-  try {
-    const stream = await groq.chat.completions.create({
-      model: env.GROQ_MODEL,
-      reasoning_effort: reasoningEffort,
-      temperature: 0.3,
-      stream: true,
-      messages: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-    });
+  return withLlmDeadline(async (signal) => {
+    try {
+      const stream = await groq.chat.completions.create({
+        model: env.GROQ_MODEL,
+        reasoning_effort: reasoningEffort,
+        temperature: 0.3,
+        stream: true,
+        messages: [
+          { role: "system", content: `${systemPrompt}\n${MODEL_PROSE_RULES}` },
+          { role: "user", content: userPrompt },
+        ],
+      }, { signal });
 
-    for await (const chunk of stream) {
-      const delta = chunk?.choices?.[0]?.delta?.content;
-      if (delta) {
-        full += delta;
-        onDelta(delta);
+      for await (const chunk of stream) {
+        if (signal.aborted) throw new AppError("AI_UNAVAILABLE", "Analysis was cancelled.");
+        const delta = chunk?.choices?.[0]?.delta?.content;
+        if (delta) {
+          full += delta;
+          onDelta(delta);
+        }
       }
+    } catch (error) {
+      throw new AppError(
+        "AI_UNAVAILABLE",
+        `Groq stream failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
-  } catch (error) {
-    throw new AppError(
-      "AI_UNAVAILABLE",
-      `Groq stream failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
 
-  if (full.trim().length === 0) {
-    throw new AppError("AI_INVALID_RESPONSE", "Groq returned an empty stream");
-  }
+    if (full.trim().length === 0) {
+      throw new AppError("AI_INVALID_RESPONSE", "Groq returned an empty stream");
+    }
 
-  return full;
+    return full;
+  }, options);
 }
 
 /**
@@ -248,6 +256,8 @@ function finaliseInsight(rawContent: string, factPackage: AiFactPackage, key: st
   }
 
   validateEvidence(validated.data, factPackage);
+  const { evidence: _citations, ...prose } = validated.data;
+  assertGroundedAnalysis(collectResultTexts(prose), factPackage);
 
   responseCache.set(key, validated.data);
   return validated.data;

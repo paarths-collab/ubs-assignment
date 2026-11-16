@@ -5,12 +5,53 @@ import path from "node:path";
 import { loadDataset } from "../src/repositories/DataLoader";
 import { DATASET_REGRESSION_TRUTHS } from "../src/config/constants";
 import type { RawFullEventDetailMap, RawStreamEventList } from "../src/types/Event";
+import type { RiskEventsDataset } from "../src/types/RiskEvent";
+import type { RiskPatternsDataset } from "../src/types/Pattern";
+import { validateRiskDataset } from "../src/validation/validateRiskDataset";
+import { recomputePatternStatistics, summarizeReport } from "../src/validation/recomputePatternStatistics";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const dataDir = path.resolve(__dirname, "../data");
 
 function readJson<T>(fileName: string): T {
   return JSON.parse(readFileSync(path.join(dataDir, fileName), "utf-8")) as T;
+}
+
+/**
+ * Structure + statistics validation of the risk_events_final.json /
+ * risk_patterns_final.json pair. Returns true when everything passes.
+ */
+function validateRiskPair(): boolean {
+  console.log("\n--- Risk events + patterns (risk_events_final.json, risk_patterns_final.json) ---");
+  const eventsDataset = readJson<RiskEventsDataset>("risk_events_final.json");
+  const patternsDataset = readJson<RiskPatternsDataset>("risk_patterns_final.json");
+  console.log(`Loaded ${eventsDataset.events?.length ?? 0} risk events, ${patternsDataset.patterns?.length ?? 0} patterns.`);
+
+  const validation = validateRiskDataset(eventsDataset, patternsDataset);
+  for (const issue of validation.issues) {
+    const marker = issue.severity === "error" ? "ERROR" : "WARN ";
+    console.log(`[${marker}] ${issue.message}`);
+  }
+
+  if (Array.isArray(eventsDataset.events) && Array.isArray(patternsDataset.patterns)) {
+    try {
+      const report = recomputePatternStatistics(eventsDataset.events, patternsDataset, {
+        eventsFileEnterprise: eventsDataset.enterprise,
+      });
+      console.log(summarizeReport(report));
+      const empty = Object.entries(report.fieldsComparedByPattern).filter(([, n]) => n === 0);
+      if (empty.length > 0 || report.fieldsCompared === 0) {
+        console.log("FAIL  no statistics were compared for some patterns");
+        return false;
+      }
+    } catch (err) {
+      console.log(`FAIL  statistics recomputation threw: ${(err as Error).message}`);
+      return false;
+    }
+  }
+
+  console.log(`${validation.valid ? "PASS" : "FAIL"}  risk events + patterns validation`);
+  return validation.valid;
 }
 
 function main(): void {
@@ -57,6 +98,13 @@ function main(): void {
 
     const rootCauseCount = new Set(events.map((e) => e.rootCause)).size;
     check("root cause count", rootCauseCount, DATASET_REGRESSION_TRUTHS.rootCauseCount);
+  } catch (err) {
+    console.error((err as Error).message);
+    hasFailure = true;
+  }
+
+  try {
+    if (!validateRiskPair()) hasFailure = true;
   } catch (err) {
     console.error((err as Error).message);
     hasFailure = true;

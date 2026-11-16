@@ -1,5 +1,7 @@
 import { env } from "../config/env.js";
 import { AppError } from "../utils/errors.js";
+import { withLlmDeadline, type LlmCallOptions } from "./AnalysisSafety.js";
+import { MODEL_PROSE_RULES } from "../../../risk-stream-explorer/src/services/aiGrounding.js";
 
 /**
  * OpenRouter exposes an OpenAI-compatible Chat Completions API, so this
@@ -25,7 +27,7 @@ function headers(): Record<string, string> {
     Authorization: `Bearer ${requireKey()}`,
     "Content-Type": "application/json",
     // Optional attribution headers OpenRouter uses for its rankings.
-    "X-Title": "UBS Executive Risk Overview",
+    "X-Title": "Signal Data Analysis",
   };
 }
 
@@ -64,128 +66,96 @@ export async function completeOpenRouterJson(
   systemPrompt: string,
   userPrompt: string,
   jsonSchema?: { name: string; schema: unknown },
+  options: LlmCallOptions = {},
 ): Promise<string> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), env.GROQ_TIMEOUT_MS);
-
-  let response: Response;
-  try {
-    response = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: headers(),
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: env.OPENROUTER_MODEL,
-        temperature: 0.2,
-        response_format:
-          jsonSchema === undefined
-            ? { type: "json_object" }
+  return withLlmDeadline(async (signal) => {
+    try {
+      const response = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
+        method: "POST",
+        headers: headers(),
+        signal,
+        body: JSON.stringify({
+          model: env.OPENROUTER_MODEL,
+          temperature: 0.2,
+          response_format: jsonSchema === undefined ? { type: "json_object" }
             : { type: "json_schema", json_schema: { ...jsonSchema, strict: true } },
-        messages: [
-          { role: "system", content: withSchemaInstruction(systemPrompt, jsonSchema) },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-  } catch (error) {
-    throw new AppError(
-      "AI_UNAVAILABLE",
-      `OpenRouter request failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  } finally {
-    clearTimeout(timeout);
-  }
-
-  if (!response.ok) throw await failure(response);
-
-  const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-  const content = payload.choices?.[0]?.message?.content;
-  if (!content) throw new AppError("AI_INVALID_RESPONSE", "OpenRouter returned an empty response");
-
-  return content;
+          messages: [
+            { role: "system", content: withSchemaInstruction(`${systemPrompt}\n${MODEL_PROSE_RULES}`, jsonSchema) },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+      if (!response.ok) throw await failure(response);
+      const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
+      const content = payload.choices?.[0]?.message?.content;
+      if (!content) throw new AppError("AI_INVALID_RESPONSE", "OpenRouter returned an empty response");
+      return content;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError("AI_UNAVAILABLE", "OpenRouter request failed.");
+    }
+  }, options);
 }
 
-/**
- * Streams a completion, invoking `onDelta` per token chunk. Parses the
- * OpenAI-style SSE framing: `data: {json}` lines terminated by `data: [DONE]`.
- */
+/** The deadline covers connection setup, the entire SSE body, and idle reads. */
 export async function streamOpenRouter(
   systemPrompt: string,
   userPrompt: string,
   onDelta: (text: string) => void,
+  options: LlmCallOptions = {},
 ): Promise<string> {
-  let response: Response;
-  try {
-    response = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: headers(),
-      body: JSON.stringify({
-        model: env.OPENROUTER_MODEL,
-        temperature: 0.3,
-        stream: true,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-      }),
-    });
-  } catch (error) {
-    throw new AppError(
-      "AI_UNAVAILABLE",
-      `OpenRouter stream failed: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-
-  if (!response.ok) throw await failure(response);
-  if (!response.body) throw new AppError("AI_UNAVAILABLE", "OpenRouter returned no response body");
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-  let full = "";
-
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-
-      // A chunk can split mid-event, so only complete blocks are consumed
-      // and the remainder stays buffered for the next read.
-      const blocks = buffer.split("\n\n");
-      buffer = blocks.pop() ?? "";
-
-      for (const block of blocks) {
-        for (const line of block.split("\n")) {
-          if (!line.startsWith("data: ")) continue;
-
-          const data = line.slice(6).trim();
-          if (data === "[DONE]") continue;
-
-          try {
-            const parsed = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+  return withLlmDeadline(async (signal) => {
+    let reader: ReadableStreamDefaultReader<Uint8Array> | undefined;
+    const cancelReader = () => { void reader?.cancel().catch(() => {}); };
+    signal.addEventListener("abort", cancelReader, { once: true });
+    try {
+      const response = await fetch(`${env.OPENROUTER_BASE_URL}/chat/completions`, {
+        method: "POST", headers: headers(), signal,
+        body: JSON.stringify({
+          model: env.OPENROUTER_MODEL, temperature: 0.3, stream: true,
+          messages: [
+            { role: "system", content: `${systemPrompt}\n${MODEL_PROSE_RULES}` },
+            { role: "user", content: userPrompt },
+          ],
+        }),
+      });
+      if (!response.ok) throw await failure(response);
+      if (!response.body) throw new AppError("AI_UNAVAILABLE", "OpenRouter returned no response body");
+      if (signal.aborted) { void response.body.cancel(); throw new AppError("AI_UNAVAILABLE", "Analysis was cancelled."); }
+      reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let full = "";
+      let finished = false;
+      while (!finished) {
+        const { done, value } = await reader.read();
+        if (signal.aborted) throw new AppError("AI_UNAVAILABLE", "Analysis was cancelled.");
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const blocks = buffer.split(/\r?\n\r?\n/);
+        buffer = blocks.pop() ?? "";
+        for (const block of blocks) {
+          for (const line of block.split(/\r?\n/)) {
+            if (!line.startsWith("data: ")) continue;
+            const data = line.slice(6).trim();
+            if (data === "[DONE]") { finished = true; break; }
+            let parsed: { choices?: Array<{ delta?: { content?: string } }> };
+            try { parsed = JSON.parse(data); } catch { continue; }
             const delta = parsed.choices?.[0]?.delta?.content;
-            if (delta) {
-              full += delta;
-              onDelta(delta);
-            }
-          } catch {
-            // OpenRouter interleaves comment/keep-alive lines; skip anything unparseable.
+            if (delta) { full += delta; onDelta(delta); }
           }
+          if (finished) break;
         }
       }
+      if (full.trim().length === 0) throw new AppError("AI_INVALID_RESPONSE", "OpenRouter returned an empty stream");
+      return full;
+    } catch (error) {
+      if (error instanceof AppError) throw error;
+      throw new AppError("AI_UNAVAILABLE", "OpenRouter stream interrupted.");
+    } finally {
+      signal.removeEventListener("abort", cancelReader);
+      cancelReader();
+      reader?.releaseLock();
     }
-  } catch (error) {
-    throw new AppError(
-      "AI_UNAVAILABLE",
-      `OpenRouter stream interrupted: ${error instanceof Error ? error.message : String(error)}`,
-    );
-  }
-
-  if (full.trim().length === 0) {
-    throw new AppError("AI_INVALID_RESPONSE", "OpenRouter returned an empty stream");
-  }
-
-  return full;
+  }, options);
 }

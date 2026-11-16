@@ -449,7 +449,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
       ]);
 
       // Return sentinel on first call, normal text on others
-      const response = callCount === 0 ? sentinelToken : `Response ${callCount}`;
+      const response = callCount === 0 ? sentinelToken : "Further qualitative response";
       callCount++;
 
       onDelta(response);
@@ -543,7 +543,7 @@ describe("AI Orchestration - Prompts & Sections", () => {
     const { runAnalysisSection } = await import("../src/services/AIAnalysisOrchestrator");
     const GroqService = await import("../src/services/LlmService");
 
-    const testResponse = "Stream chunk 1 Stream chunk 2";
+    const testResponse = "First stream chunk, then another stream chunk";
 
     vi.spyOn(GroqService, "streamCompletion").mockResolvedValueOnce(testResponse);
 

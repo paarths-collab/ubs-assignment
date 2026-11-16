@@ -23,14 +23,14 @@ export class RiskRepository {
   private readonly patternsById: ReadonlyMap<string, RiskPattern>;
   private readonly aiConfig: RiskAiConfig;
 
-  constructor() {
-    this.events = readJson<RiskEvent[]>(DATA_PATHS.events);
+  constructor(dataPaths = DATA_PATHS) {
+    this.events = readJson<RiskEvent[]>(dataPaths.events);
     this.eventsById = new Map(this.events.map((event) => [event.eventId, event]));
-    this.config = readJson<RiskConfig>(DATA_PATHS.config);
-    const patternsFile = readJson<RiskPatternsFile>(DATA_PATHS.patterns);
+    this.config = readJson<RiskConfig>(dataPaths.config);
+    const patternsFile = readJson<RiskPatternsFile>(dataPaths.patterns);
     this.patterns = patternsFile.patterns;
     this.patternsById = new Map(this.patterns.map((pattern) => [pattern.patternId, pattern]));
-    this.aiConfig = readJson<RiskAiConfig>(DATA_PATHS.aiConfig);
+    this.aiConfig = readJson<RiskAiConfig>(dataPaths.aiConfig);
 
     validateDataset(this.events, this.patterns, this.config);
   }

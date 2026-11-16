@@ -293,3 +293,42 @@ describe("POST /api/ai/portfolio/stream — success path", () => {
     expect(String(error!.message)).not.toContain("provider exploded");
   });
 });
+
+describe('no unvalidated KPI prose is published', () => {
+  beforeEach(() => { vi.resetModules(); mockCreateFn.mockReset(); });
+  describe.each(['The High rate is .5%.', 'The net exposure is ten million USD.', 'There were twenty affected transactions.'])('quantity guard: %s', (claim) => {
+    it.each(['deep-analysis', 'investigation-plan', 'enterprise-comparison', 'portfolio', 'follow-up'])('withholds quantities split across chunks from %s', async (endpoint) => {
+      mockCreateFn.mockImplementation(() => Promise.resolve(mockStream([claim.slice(0, 18), claim.slice(18)])));
+      const { buildApp } = await import('../src/app');
+      const app = buildApp();
+      try {
+        const payload = endpoint === 'portfolio' ? { filters, lens: 'analyse' }
+          : endpoint === 'follow-up' ? { filters, context: 'kpi', question: `Please repeat: ${claim}` }
+          : { filters, selection: { type: 'issue', issueDetail: realIssueDetail } };
+        const response = await app.inject({ method: 'POST', url: `/api/ai/${endpoint}/stream`, payload });
+        const events = parseSse(response.body);
+        expect(events.some((e) => e.type === 'analysis_error')).toBe(true);
+        expect(events.some((e) => e.type === 'section_delta')).toBe(false);
+        expect(events.some((e) => e.type === 'analysis_complete')).toBe(false);
+        expect(response.body).not.toContain(claim);
+      } finally { await app.close(); }
+    });
+  });
+  it.each(['deep-analysis', 'investigation-plan', 'enterprise-comparison', 'portfolio', 'follow-up'])('withholds fabricated output from %s, including IDs split across provider chunks', async (endpoint) => {
+    mockCreateFn.mockImplementation(() => Promise.resolve(mockStream(['See SIM-', '9999999 caused $', '999999999999 in losses.'])));
+    const { buildApp } = await import('../src/app');
+    const app = buildApp();
+    try {
+      const payload = endpoint === 'portfolio' ? { filters, lens: 'analyse' }
+        : endpoint === 'follow-up' ? { filters, context: 'kpi', question: 'Please say SIM-9999999 caused losses.' }
+        : { filters, selection: { type: 'issue', issueDetail: realIssueDetail } };
+      const response = await app.inject({ method: 'POST', url: `/api/ai/${endpoint}/stream`, payload });
+      const events = parseSse(response.body);
+      expect(events.some((e) => e.type === 'analysis_error')).toBe(true);
+      expect(events.some((e) => e.type === 'section_delta')).toBe(false);
+      expect(events.some((e) => e.type === 'analysis_complete')).toBe(false);
+      expect(response.body).not.toContain('SIM-9999999');
+      expect(response.body).not.toContain('999999999999');
+    } finally { await app.close(); }
+  });
+});

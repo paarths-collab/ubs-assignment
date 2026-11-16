@@ -1,8 +1,11 @@
 # Architecture at a glance
 
-An npm-workspaces monorepo with two packages. The backend is *both* a
-TypeScript library (imported directly by the frontend build via the `@backend`
-alias) **and** a Fastify HTTP server.
+An npm-workspaces monorepo with four packages: two Vite frontends and two
+Fastify APIs. The exploration backend also supplies the shared TypeScript
+library imported by the exploration frontend through its `@backend` alias.
+The executive frontend serves `/kpi`; the exploration frontend serves the
+workspace and the other analysis screens. The local gateway and deployment
+rewrites route requests to the appropriate API.
 
 ```mermaid
 graph TB
@@ -14,6 +17,7 @@ graph TB
       IS[Issues page]
       PT[Patterns page]
       R --> L & SG & GR & IS & PT
+    L -->|full page navigation| KPI["/kpi · Analytics dashboard"]
     end
 
     subgraph "Build-time import (@backend alias)"
@@ -50,7 +54,7 @@ graph TB
 | Strategy | Used by | Why |
 | --- | --- | --- |
 | **Build-time embedding** (JSON imported into the bundle) | Streamgraph, Relationship Network | These are visual explorers over a fixed dataset. Embedding makes them work from a single static HTML file — even `file://` — with zero API dependency. |
-| **Runtime HTTP fetch** | Executive Overview, Pattern Intelligence | Their content is *derived* (ranking, signals, comparisons) and computed once at server startup. Serving it keeps ranking logic and thresholds server-side and out of the client bundle. |
+| **Runtime HTTP fetch** | Analytics dashboard, Issue Intelligence, Pattern Intelligence | Their content is *derived* (ranking, signals, comparisons) and computed once at server startup. Serving it keeps ranking logic and thresholds server-side and out of the client bundle. |
 
 Repository layout: [repository-layout.md](repository-layout.md).
 

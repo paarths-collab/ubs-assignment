@@ -3,6 +3,7 @@ import "./styles/main.css";
 import { AppContext } from "./state/AppContext";
 import { el } from "./components/dom";
 import { renderFilterBar } from "./components/FilterBar";
+import { renderPopulationSnapshot } from "./components/PopulationSnapshot";
 import { renderKpiGrid } from "./components/KpiGrid";
 import { renderPortfolioAnalysisPanel } from "./components/PortfolioAnalysisPanel";
 import { renderAttentionCards } from "./components/AttentionCards";
@@ -30,19 +31,24 @@ function renderHeader(ctx: AppContext): HTMLElement {
     subtitle.textContent = `${eventCount.toLocaleString()} synthetic risk events · ${monthYear(filters.dateFrom)}–${monthYear(filters.dateTo)} · ${scope}`;
   });
 
-  // Omitted when there is no main app to return to — see `mainAppHref`.
   const backHref = mainAppHref();
+  const navigation = el("nav", { className: "workspace-nav", "aria-label": "Workspace" });
+  if (backHref !== null) {
+    for (const [label, href] of [["Overview", "/"], ["Dashboard", "/kpi"], ["Timeline", "/streamgraph"], ["Network", "/graph"], ["Issues", "/issues"], ["Patterns", "/patterns"]]) {
+      navigation.append(el("a", { href, className: href === "/kpi" ? "workspace-nav__link is-active" : "workspace-nav__link", "aria-current": href === "/kpi" ? "page" : undefined }, [label]));
+    }
+  } else {
+    navigation.append(el("a", { href: "#main-content", className: "workspace-nav__link is-active", "aria-current": "page" }, ["Dashboard"]));
+  }
 
   return el("header", { className: "app-header" }, [
-    el("div", {}, [
-      el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Executive Risk Overview"]),
-      subtitle,
+    el("a", { className: "signal-brand", href: backHref ?? "#main-content", "aria-label": "Signal Data Analysis home" }, [
+      el("span", { className: "signal-brand__mark", "aria-hidden": "true" }, [el("i"), el("i"), el("i")]),
+      el("span", {}, [el("strong", {}, ["Signal"]), el("span", { className: "signal-brand__label" }, ["Data Analysis"])]),
     ]),
-    backHref !== null &&
-      el("a", { className: "app-header__back", href: backHref }, [
-        el("span", { className: "glyph", "aria-hidden": "true" }, ["←"]),
-        "Main app",
-      ]),
+    navigation,
+    el("span", { className: "workspace-status" }, [el("span", { className: "workspace-status__dot", "aria-hidden": "true" }), "Demo workspace"]),
+    el("div", { className: "app-header__context" }, [subtitle]),
   ]);
 }
 
@@ -70,7 +76,21 @@ function boot(): void {
   const main = el("main", { className: "app-main", id: "main-content" });
   root.append(main);
 
-  const errorHost = el("div", {});
+  const refreshStatus = el("span", { className: "dashboard-intro__status", role: "status", "aria-live": "polite" }, ["Loading dataset…"]);
+  main.append(el("div", { className: "dashboard-intro" }, [
+    el("div", {}, [
+      el("p", { className: "dashboard-eyebrow" }, ["WORKSPACE / ANALYTICS"]),
+      el("h1", {}, ["Analysis overview"]),
+      el("p", { className: "dashboard-intro__description" }, ["Explore patterns, exposure, and the evidence behind every insight."]),
+    ]),
+    el("div", { className: "dashboard-intro__actions" }, [refreshStatus, el("a", { className: "dashboard-primary-action", href: "#ai-analysis" }, ["Explore with AI", el("span", { "aria-hidden": "true" }, ["↗"])])]),
+  ]));
+  ctx.subscribe((state) => {
+    main.setAttribute("aria-busy", String(state.loading));
+    refreshStatus.textContent = state.loading ? "Updating selection…" : state.loadError ? "Selection could not be updated" : state.overview ? `${state.overview.eventCount.toLocaleString()} events in view` : "Dataset unavailable";
+  });
+
+  const errorHost = el("div", { role: "alert" });
   main.append(errorHost);
   ctx.subscribe((state) => {
     errorHost.replaceChildren(state.loadError ? el("div", { className: "error-state" }, [state.loadError]) : "");
@@ -83,6 +103,7 @@ function boot(): void {
   const hosts = {
     kpi: el("div", {}),
     portfolioAi: el("div", {}),
+    snapshot: el("div", {}),
     attention: el("div", {}),
     composition: el("div", {}),
     exposure: el("div", {}),
@@ -92,17 +113,19 @@ function boot(): void {
   };
 
   main.append(
-    section("Current Risk Picture", "The filtered population at a glance", hosts.kpi),
-    section("AI Analysis", "Reacts to whatever your filters currently show", hosts.portfolioAi),
-    section("What Needs Attention", "Why should I care?", hosts.attention),
-    section("Risk Composition", "What is this population made of?", hosts.composition),
-    section("Exposure & Impact", "Realised money, potential money, operational burden", hosts.exposure),
-    section("Where Is Risk Concentrated?", "Which business units carry it", hosts.organisations),
-    section("Recurring Issues", "The scenarios behind the numbers — select one to inspect", hosts.issues),
-    section("Selected Risk Brief", "Full analysis and management view", hosts.brief, "risk-brief"),
+    section("Key metrics", "Select a metric to inspect its source events", hosts.kpi),
+    hosts.snapshot,
+    section("Priority signals", "Where the current selection needs attention", hosts.attention, "priority-signals"),
+    section("AI analysis", "Interpret the evidence in your current selection", hosts.portfolioAi, "ai-analysis"),
+    section("Population breakdown", "Severity, workflow, and organisation", hosts.composition),
+    section("Exposure & impact", "Financial exposure and operational effort", hosts.exposure),
+    section("Organisation concentration", "Compare the business units behind the data", hosts.organisations),
+    section("Recurring issues", "Select an issue to explore its evidence", hosts.issues),
+    section("Selected issue brief", "Analysis, ownership, and supporting evidence", hosts.brief, "risk-brief"),
   );
 
   renderKpiGrid(ctx, hosts.kpi);
+  renderPopulationSnapshot(ctx, hosts.snapshot);
   renderPortfolioAnalysisPanel(ctx, hosts.portfolioAi);
   renderAttentionCards(ctx, hosts.attention);
   renderRiskComposition(ctx, hosts.composition);

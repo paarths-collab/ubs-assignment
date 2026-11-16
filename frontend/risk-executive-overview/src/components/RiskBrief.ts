@@ -194,21 +194,22 @@ export function renderRiskBrief(ctx: AppContext, host: HTMLElement): void {
     if (!scenario) return undefined;
     return scenario.patternId ? { type: "pattern", patternId: scenario.patternId } : { type: "issue", issueDetail: scenario.issueDetail };
   });
-  let lastRenderedId: string | null = null;
+  let lastRenderedKey: string | null = null;
 
   function sync(): void {
     const scenario = ctx.getSelectedScenario();
 
     if (!scenario) {
-      lastRenderedId = null;
+      lastRenderedKey = null;
       host.replaceChildren(
         el("div", { className: "brief-empty" }, ["Select an issue above to inspect the risk in detail."]),
       );
       return;
     }
 
-    if (scenario.scenarioId === lastRenderedId) return;
-    lastRenderedId = scenario.scenarioId;
+    const key = JSON.stringify({ filters: ctx.getState().filters, scenario });
+    if (key === lastRenderedKey) return;
+    lastRenderedKey = key;
 
     // AI analysis leads the brief — a manager should see the interpretation
     // before the supporting tables, not after scrolling past all of them.

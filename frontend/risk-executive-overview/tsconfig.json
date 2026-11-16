@@ -4,5 +4,5 @@
     "noEmit": true,
     "useDefineForClassFields": true
   },
-  "include": ["src"]
+  "include": ["src", "tests"]
 }

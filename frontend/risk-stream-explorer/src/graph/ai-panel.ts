@@ -30,7 +30,7 @@ function evidenceChips(eventIds: string[], onOpenEvent: (eventId: string) => voi
 }
 
 /**
- * Renders the AI result with model-generated prose visually separated from
+ * Renders the analysis with source-aware labels and prose separated from
  * application-computed facts, so an analyst can never mistake one for the
  * other. All text is inserted as textContent, never as markup.
  */
@@ -42,12 +42,20 @@ export function renderAiResult(
   container.replaceChildren();
 
   const generated = new Date(result.generatedAt);
+  const provenance = result.provenance;
+  const isAiGenerated = provenance?.analysis === "ai-generated";
+  const isFallback = provenance?.analysis === "deterministic-fallback";
+  const sourceLabel = isAiGenerated ? "AI-generated analysis" : isFallback ? "Deterministic analysis" : "Analysis · source unavailable";
+  const producer = isAiGenerated ? result.model : isFallback ? "Application template" : "Source unavailable";
+  const evidenceLabel = provenance?.evidence === "computed"
+    ? "computed evidence"
+    : provenance?.evidence === "stored-pattern" ? "stored pattern evidence" : "evidence source unavailable";
   container.appendChild(
     el("div", { className: "ai-meta" }, [
-      el("span", { className: "ai-badge", text: "AI-generated analysis" }),
+      el("span", { className: "ai-badge", text: sourceLabel }),
       el("span", {
         className: "ai-meta-text",
-        text: `${result.model} · generated ${generated.toLocaleTimeString()} · evidence-based`,
+        text: `${producer} · ${generated.toLocaleTimeString()} · ${evidenceLabel}${provenance?.cached ? " · cached" : ""}`,
       }),
     ]),
   );
@@ -58,7 +66,7 @@ export function renderAiResult(
 
   container.appendChild(
     el("div", { className: "ai-block interpretation" }, [
-      el("h3", { className: "ai-block-title", text: "AI summary" }),
+      el("h3", { className: "ai-block-title", text: isAiGenerated ? "AI summary" : isFallback ? "Computed summary" : "Summary" }),
       el("p", { className: "narrative", text: analysis.summary }),
     ]),
   );
@@ -78,7 +86,7 @@ export function renderAiResult(
   if (analysis.interpretations.length > 0) {
     container.appendChild(
       el("div", { className: "ai-block interpretation" }, [
-        el("h3", { className: "ai-block-title", text: "AI interpretation" }),
+        el("h3", { className: "ai-block-title", text: isAiGenerated ? "AI interpretation" : "Suggested interpretation" }),
         ...analysis.interpretations.map((interpretation) =>
           el("p", { className: "narrative" }, [
             el("span", { className: `confidence ${interpretation.confidence}`, text: interpretation.confidence }),

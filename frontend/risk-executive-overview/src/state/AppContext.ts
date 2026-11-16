@@ -7,6 +7,9 @@ import { createInitialState, DEFAULT_FILTERS, type AppState } from "./AppState";
 /** Orchestrates every backend call and holds the single source of UI state. */
 export class AppContext {
   readonly store = new Store<AppState>(createInitialState());
+  private refreshVersion = 0;
+  private kpiVersion = 0;
+  private insightVersion = 0;
 
   getState(): AppState {
     return this.store.getState();
@@ -45,14 +48,18 @@ export class AppContext {
   }
 
   private async refresh(): Promise<void> {
+    const version = ++this.refreshVersion;
+    ++this.kpiVersion;
+    ++this.insightVersion;
     const filters = this.getState().filters;
-    this.store.setState({ loading: true, loadError: null });
+    this.store.setState({ loading: true, loadError: null, aiInsight: null, loadingAi: false, selectedKpiId: null, kpiDetail: null, loadingKpiDetail: false });
 
     try {
       const [overview, priority] = await Promise.all([
         api.postOverview(filters),
         api.postPrioritySignals(filters),
       ]);
+      if (version !== this.refreshVersion) return;
 
       // A scenario can vanish from the filtered population entirely; drop the
       // selection rather than leaving the brief pinned to something that is
@@ -72,18 +79,20 @@ export class AppContext {
         selectedScenarioId: stillPresent ? selectedScenarioId : fallbackId,
         selectedKpiId: null,
         kpiDetail: null,
-        aiInsight: stillPresent ? this.getState().aiInsight : null,
+        aiInsight: null,
         actionFeedback: null,
       });
     } catch (err) {
+      if (version !== this.refreshVersion) return;
       this.store.setState({ loading: false, loadError: describeError(err) });
     }
   }
 
   /** Opens (or closes) the drill-down behind a KPI headline figure. */
   async selectKpi(kpiId: string): Promise<void> {
+    const version = ++this.kpiVersion;
     if (this.getState().selectedKpiId === kpiId) {
-      this.store.setState({ selectedKpiId: null, kpiDetail: null });
+      this.store.setState({ selectedKpiId: null, kpiDetail: null, loadingKpiDetail: false });
       return;
     }
 
@@ -91,19 +100,21 @@ export class AppContext {
     try {
       const { detail } = await api.postRiskDetail(this.getState().filters, { type: "kpi", kpiId });
       // A slower earlier request must not overwrite a newer selection.
-      if (this.getState().selectedKpiId !== kpiId) return;
+      if (version !== this.kpiVersion) return;
       this.store.setState({ kpiDetail: detail, loadingKpiDetail: false });
     } catch {
-      if (this.getState().selectedKpiId !== kpiId) return;
+      if (version !== this.kpiVersion) return;
       this.store.setState({ kpiDetail: null, loadingKpiDetail: false, selectedKpiId: null });
     }
   }
 
   selectScenario(scenarioId: string): void {
+    ++this.insightVersion;
     const alreadySelected = this.getState().selectedScenarioId === scenarioId;
     this.store.setState({
       selectedScenarioId: alreadySelected ? null : scenarioId,
       aiInsight: null,
+      loadingAi: false,
       actionFeedback: null,
     });
   }
@@ -111,6 +122,7 @@ export class AppContext {
   async loadAiInsight(): Promise<void> {
     const scenario = this.getSelectedScenario();
     if (!scenario) return;
+    const version = ++this.insightVersion;
 
     const selection = scenario.patternId
       ? ({ type: "pattern", patternId: scenario.patternId } as const)
@@ -119,8 +131,10 @@ export class AppContext {
     this.store.setState({ loadingAi: true });
     try {
       const insight = await api.postManagerInsight(this.getState().filters, selection);
+      if (version !== this.insightVersion) return;
       this.store.setState({ aiInsight: insight, loadingAi: false });
     } catch (err) {
+      if (version !== this.insightVersion) return;
       this.store.setState({ loadingAi: false, aiInsight: { available: false, reason: describeError(err) } });
     }
   }

@@ -14,6 +14,8 @@ import { registerAiRoute } from "./routes/ai.route.js";
 import { registerAiStreamRoutes } from "./routes/ai-stream.route.js";
 import { registerActionsRoute } from "./routes/actions.route.js";
 
+import { registerSourceEventsRoute } from "./routes/source-events.route.js";
+
 const MAX_BODY_BYTES = 1_000_000;
 
 export interface BuildAppOptions {
@@ -43,6 +45,7 @@ export function buildApp(options: BuildAppOptions = {}): FastifyInstance {
 
   registerHealthRoute(app, repository);
   registerMetadataRoute(app, repository);
+  registerSourceEventsRoute(app, repository);
   registerOverviewRoute(app, repository);
   registerPriorityRoute(app, repository);
   registerRiskDetailRoute(app, repository);

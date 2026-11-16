@@ -1,6 +1,6 @@
 # Testing & quality gates
 
-**26 test files · 200 tests**, one Vitest config spanning both workspaces.
+**65 test files · 814 tests**, one Vitest config spanning both workspaces.
 
 ```mermaid
 flowchart LR

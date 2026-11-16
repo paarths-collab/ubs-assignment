@@ -33,10 +33,10 @@ export function renderIssuesPage(root: HTMLElement): void {
               navigate("home");
             },
           },
-          ["← Operational Risk Workbench"],
+          ["← Signal · Data Analysis"],
         ),
         el("div", { className: "app-header__title" }, [el("span", { className: "glyph" }, ["◈"]), "Issue Intelligence"]),
-        el("div", { className: "app-header__breadcrumb" }, ["Enterprise Risk · Component 4"]),
+        el("div", { className: "app-header__breadcrumb" }, ["Workspace / Issues"]),
       ]),
     ]),
   );
