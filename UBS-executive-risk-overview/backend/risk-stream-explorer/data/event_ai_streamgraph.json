@@ -1,0 +1,13 @@
+{
+  "metadata": {
+    "component": "Risk Stream / Timeline Explorer",
+    "description": "Pre-generated AI explanations for verified risk-event and timeline facts.",
+    "generated": false,
+    "model": null,
+    "prompt_version": null,
+    "generated_at": null
+  },
+  "period_insights": {},
+  "event_insights": {},
+  "trend_insights": {}
+}

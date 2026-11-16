@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "useDefineForClassFields": true,
+    "baseUrl": ".",
+    "paths": {
+      "@backend/*": ["../../backend/risk-stream-explorer/src/*"]
+    }
+  },
+  "include": ["src"]
+}

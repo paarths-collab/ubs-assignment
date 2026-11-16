@@ -1,0 +1,29 @@
+{
+  "name": "risk-stream-explorer-workspace",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "backend/risk-stream-explorer",
+    "backend/risk-executive-overview",
+    "frontend/risk-stream-explorer",
+    "frontend/risk-executive-overview"
+  ],
+  "scripts": {
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest",
+    "dev": "npm run dev --workspace=frontend/risk-stream-explorer",
+    "dev:server": "npm run dev --workspace=backend/risk-stream-explorer",
+    "build": "npm run build --workspace=frontend/risk-stream-explorer && node -e \"require('fs').renameSync('dist/index.html','dist/risk-stream-explorer.html')\"",
+    "build:vercel": "npm run build --workspace=frontend/risk-stream-explorer && npm run build:overview && node scripts/assemble-vercel-output.mjs",
+    "dev:api": "npm run dev --workspace=backend/risk-executive-overview",
+    "dev:overview": "npm run dev --workspace=frontend/risk-executive-overview",
+    "build:overview": "npm run build --workspace=frontend/risk-executive-overview",
+    "typecheck": "tsc -p backend/risk-stream-explorer/tsconfig.json && tsc -p backend/risk-executive-overview/tsconfig.json && tsc -p frontend/risk-stream-explorer/tsconfig.json && tsc -p frontend/risk-executive-overview/tsconfig.json",
+    "validate-data": "tsx backend/risk-stream-explorer/scripts/validate-data.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.4",
+    "tsx": "^4.19.2"
+  }
+}

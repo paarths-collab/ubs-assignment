@@ -1,0 +1,151 @@
+{
+  "schemaVersion": 1,
+  "component": "Executive Risk Overview",
+  "recordCount": 1000,
+  "globalDateField": "occurrenceDate",
+  "dateRange": {
+    "min": "2024-09-01",
+    "max": "2026-08-31"
+  },
+  "filters": {
+    "organisations": [
+      "Enterprise-wide",
+      "Atlas Trading Support → Fictional Enterprise Operations",
+      "BluePeak Lending Services → Fictional Enterprise Operations",
+      "Cedar Data Services → Fictional Enterprise Operations",
+      "Evergreen Reconciliations → Fictional Enterprise Operations",
+      "Horizon Platform Services → Fictional Enterprise Operations",
+      "Juniper Service Delivery → Fictional Enterprise Operations",
+      "Lighthouse Reporting → Fictional Enterprise Operations",
+      "Meridian Client Operations → Fictional Enterprise Operations",
+      "Northstar Advisory Services → Fictional Enterprise Operations",
+      "Orion Product Operations → Fictional Enterprise Operations",
+      "Silverline Asset Services → Fictional Enterprise Operations",
+      "Summit Payments → Fictional Enterprise Operations"
+    ],
+    "eventTypes": [
+      "All",
+      "Financial",
+      "Non-Financial"
+    ],
+    "severities": [
+      "All",
+      "Low",
+      "Moderate",
+      "High"
+    ],
+    "statuses": [
+      "Active",
+      "Cancelled",
+      "Closed",
+      "Fully Validated",
+      "Pending Closure",
+      "Remediation in Progress",
+      "Under Investigation"
+    ],
+    "stages": [
+      "Closure Review",
+      "Complete",
+      "Fact Finding",
+      "Initial Assessment",
+      "Remediation",
+      "Validation"
+    ],
+    "rootCauses": [
+      "Data Quality / Mapping Error",
+      "Governance / Ownership Gap",
+      "People / Execution Error",
+      "Process / Control Design Gap",
+      "Process / Control Execution Failure",
+      "Technology / System Defect",
+      "Third-Party Dependency"
+    ],
+    "riskThemes": [
+      "Financial Reporting",
+      "Technology Resilience",
+      "Transaction Processing"
+    ],
+    "orCategories": [
+      "Business Disruption and System Failures",
+      "Clients, Products and Business Practices",
+      "Data and Reporting",
+      "Execution, Delivery and Process Management",
+      "External Dependency Management",
+      "Internal Control and Governance"
+    ]
+  },
+  "businessRules": {
+    "openBacklog": {
+      "definition": "All events except Closed and Cancelled",
+      "excludedStatuses": [
+        "Closed",
+        "Cancelled"
+      ]
+    },
+    "financialAmounts": {
+      "financialEventType": "Financial",
+      "nonFinancialStructuralNullFields": [
+        "grossAmountUsd",
+        "netAmountUsd",
+        "recoveryAmountUsd"
+      ],
+      "missingAmountBehaviour": "null_not_zero"
+    },
+    "recoveryRate": {
+      "formula": "sum(recoveryAmountUsd) / sum(grossAmountUsd)",
+      "scope": "Financial events only",
+      "zeroGrossBehaviour": "null"
+    },
+    "remediationHours": {
+      "authoritativeSource": "Impact Detail",
+      "parsedField": "remediationHours",
+      "auditSource": "Impacts",
+      "reason": "Impact Detail is also represented in Event Description; the separate Impacts field contains conflicting remediation-hour values."
+    },
+    "peopleRecurrence": {
+      "interpretation": "workflow_concentration_not_personal_blame"
+    }
+  },
+  "kpis": [
+    {
+      "id": "totalEvents",
+      "label": "Total Events",
+      "calculation": "count(filteredEvents)"
+    },
+    {
+      "id": "highSeverityEvents",
+      "label": "High-Severity Events",
+      "calculation": "count(filteredEvents where severity == High)"
+    },
+    {
+      "id": "openBacklog",
+      "label": "Open Backlog",
+      "calculation": "count(filteredEvents where status not in excludedStatuses)"
+    },
+    {
+      "id": "grossExposure",
+      "label": "Gross Loss / Exposure",
+      "calculation": "sum(grossAmountUsd)"
+    },
+    {
+      "id": "netExposure",
+      "label": "Net Loss / Exposure",
+      "calculation": "sum(netAmountUsd)"
+    },
+    {
+      "id": "recoveryRate",
+      "label": "Recovery Rate",
+      "calculation": "sum(recoveryAmountUsd) / sum(grossAmountUsd)"
+    },
+    {
+      "id": "potentialImpact",
+      "label": "Potential Impact",
+      "calculation": "sum(potentialImpactUsd)"
+    },
+    {
+      "id": "remediationHours",
+      "label": "Remediation Hours",
+      "calculation": "sum(remediationHours)"
+    }
+  ]
+}

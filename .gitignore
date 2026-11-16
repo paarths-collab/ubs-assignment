@@ -22,3 +22,7 @@ yarn-error.log*
 .claude/
 .vercel
 .env*
+!.env.example
+
+# Local submission archives
+/*.zip
